@@ -1,0 +1,45 @@
+postgres/
+
+# Ejecutables compilados
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Archivos temporales y de log
+*.log
+*.tmp
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de compilación
+/build/
+/bin/
+/dist/
+
+# Archivos generados por Go
+*.cover
+*.prof
+
+# Archivos y carpetas del editor
+.vscode/
+.idea/
+*.swp
+
+# Archivos generados por herramientas de desarrollo
+.env
+.env.*
+
+# Módulos y dependencias descargadas
+vendor/
+
+# Archivos de pruebas y benchmarking
+*.bench
+
+# Cache de Go
+**/.cache/
