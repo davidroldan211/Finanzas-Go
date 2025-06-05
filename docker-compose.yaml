@@ -1,13 +1,23 @@
+version: '3.8'
+
 services:
   db:
     image: postgres:14.3
     restart: always
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"  # Puerto externo desde variable de entorno
     environment:
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     container_name: FinanceDB
     volumes:
-      - ./postgres:/var/lib/postgresql/data
-      
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

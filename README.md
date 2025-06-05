@@ -4,6 +4,16 @@ Sistema backend para la gestión de finanzas personales, desarrollado en Go con 
 
 ---
 
+## 📚 Tabla de Contenido
+
+- [Principios de Clean Architecture](#📁 Estructura del Proyecto)
+- [Estructura de Carpetas](#estructura-de-carpetas)
+- [Dependencias y Librerías](#dependencias-y-librerías)
+- [Cómo Ejecutar](#cómo-ejecutar)
+- [Pruebas](#pruebas)
+- [Ejemplo de Flujo](#ejemplo-de-flujo)
+- [Contribuciones](#contribuciones)
+
 ## 📁 Estructura del Proyecto
 
 ## ⚙️ Requisitos
@@ -17,7 +27,7 @@ Sistema backend para la gestión de finanzas personales, desarrollado en Go con 
 ## 🔧 Instalación
 
 ```bash
-git clone https://github.com/tuusuario/finanzas-personales.git
+git clone https://github.com/davidroldan211/Finanzas-Go.git
 ```
 ```bash
 cd finanzas-personales
@@ -26,6 +36,11 @@ cd finanzas-personales
 go mod tidy
 ```
 
+## 🐳 Docker
+```bash
+docker compose up --build
+```
+Este comando levantará la infraestructura definida (como PostgreSQL, Redis, etc.).
 
 ## ▶️ Ejecución
 Modo local
@@ -43,12 +58,6 @@ make build     # Compilar binario
 make test      # Ejecutar tests
 ```
 
-
-## 🐳 Docker
-```bash
-docker compose up --build
-```
-Este comando levantará la infraestructura definida (como PostgreSQL, Redis, etc.).
 
 ## 🧪 Pruebas
 ```bash
