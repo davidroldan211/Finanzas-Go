@@ -2,8 +2,10 @@ package main
 
 import (
 	"finanzas-api/config"
+	"finanzas-api/internal/auth"
+	authRoutes "finanzas-api/internal/auth/routes"
 	"finanzas-api/internal/users"
-	"finanzas-api/internal/users/routes"
+	userRoutes "finanzas-api/internal/users/routes"
 	DataBase "finanzas-api/shared/db"
 	"fmt"
 	"log"
@@ -40,7 +42,10 @@ func main() {
 	}
 
 	userModule := users.NewUsersModule(db)
-	routes.SetupUserRoutes(r, userModule.Handler)
+	authModule := auth.NewAuthModule(db, config)
+
+	authRoutes.SetupAuthRoutes(r, authModule.Handler)
+	userRoutes.SetupUserRoutes(r, userModule.Handler, authModule.Middleware.Handler)
 
 	log.Println("🚀 Servidor iniciado en " + config.Server.Host + ":" + strconv.Itoa(config.Server.Port))
 	r.Run(config.Server.Host + ":" + strconv.Itoa(config.Server.Port))
