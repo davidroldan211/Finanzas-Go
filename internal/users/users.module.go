@@ -20,7 +20,7 @@ func NewUsersModule(db *gorm.DB) *UsersModule {
 	var userUseCase domain.UserUseCase
 	var userHandler *handler.UserHandler
 
-	userRepo = repository.NewUserMemoryRepository()
+	userRepo = repository.NewUserPostgresRepository(db)
 	userUseCase = usecase.NewUserUseCase(userRepo)
 	userHandler = handler.NewUserHandler(userUseCase)
 

@@ -3,6 +3,7 @@ package usecase
 import (
 	"errors"
 	"finanzas-api/internal/users/domain"
+	"finanzas-api/shared/security"
 	"strings"
 )
 
@@ -31,6 +32,12 @@ func (uc *UserUseCase) CreateUser(user *domain.User) error {
 	if exists {
 		return errors.New("email already exists")
 	}
+
+	hashedPassword, err := security.HashPassword(user.Password)
+	if err != nil {
+		return err
+	}
+	user.Password = hashedPassword
 
 	// Crear usuario
 	return uc.userRepo.Create(user)

@@ -23,7 +23,6 @@ Sistema backend para la gestión de finanzas personales, desarrollado en Go con 
 - `make` 
 
 
-
 ## 🔧 Instalación
 
 ```bash
@@ -38,7 +37,7 @@ go mod tidy
 
 ## 🐳 Docker
 ```bash
-docker compose up --build
+docker compose up -d
 ```
 Este comando levantará la infraestructura definida (como PostgreSQL, Redis, etc.).
 

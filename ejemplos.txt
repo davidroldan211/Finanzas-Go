@@ -1,0 +1,21 @@
+{
+  "email": "david@example.com",
+  "password": "MiClaveSegura123",
+  "first_name": "David",
+  "last_name": "Roldán",
+  "is_active": true
+}
+{
+  "email": "ofelia.velez@example.com",
+  "password": "ContraseñaSegura456",
+  "first_name": "Ofelia",
+  "last_name": "Velez",
+  "is_active": true
+}
+{
+  "email": "carlos.martinez@example.com",
+  "password": "ClaveFuerte789",
+  "first_name": "Carlos",
+  "last_name": "Martínez",
+  "is_active": false
+}
