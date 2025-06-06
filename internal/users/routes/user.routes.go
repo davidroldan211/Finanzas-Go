@@ -7,24 +7,24 @@ import (
 )
 
 // SetupUserRoutes configura las rutas para el módulo de usuarios
-func SetupUserRoutes(router *gin.Engine, userHandler *handler.UserHandler) {
+func SetupUserRoutes(router *gin.Engine, userHandler *handler.UserHandler, authMiddleware func(...string) gin.HandlerFunc) {
 	// Grupo de rutas para usuarios
 	userRoutes := router.Group("/api/v1/users")
 	{
-		// POST /api/v1/users - Crear usuario
-		userRoutes.POST("", userHandler.CreateUser)
+		// POST /api/v1/users - Crear usuario (solo admin)
+		userRoutes.POST("", authMiddleware("admin"), userHandler.CreateUser)
 
-		// GET /api/v1/users - Listar usuarios
-		userRoutes.GET("", userHandler.ListUsers)
+		// GET /api/v1/users - Listar usuarios (solo admin)
+		userRoutes.GET("", authMiddleware("admin"), userHandler.ListUsers)
 
 		// GET /api/v1/users/:id - Obtener usuario por ID
-		userRoutes.GET("/:id", userHandler.GetUser)
+		userRoutes.GET("/:id", authMiddleware("admin", "user"), userHandler.GetUser)
 
 		// PUT /api/v1/users/:id - Actualizar usuario
-		userRoutes.PUT("/:id", userHandler.UpdateUser)
+		userRoutes.PUT("/:id", authMiddleware("admin", "user"), userHandler.UpdateUser)
 
-		// DELETE /api/v1/users/:id - Eliminar usuario
-		userRoutes.DELETE("/:id", userHandler.DeleteUser)
+		// DELETE /api/v1/users/:id - Eliminar usuario (solo admin)
+		userRoutes.DELETE("/:id", authMiddleware("admin"), userHandler.DeleteUser)
 	}
 }
 
