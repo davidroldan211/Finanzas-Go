@@ -26,6 +26,7 @@ type CreateUserRequest struct {
 	FirstName string `json:"first_name" binding:"required"`
 	LastName  string `json:"last_name" binding:"required"`
 	Password  string `json:"password" binding:"required,min=6"`
+	Role      string `json:"role" binding:"omitempty,oneof=admin user"`
 }
 
 // UpdateUserRequest representa la estructura de la petición para actualizar usuario
@@ -34,6 +35,7 @@ type UpdateUserRequest struct {
 	FirstName string `json:"first_name" binding:"omitempty"`
 	LastName  string `json:"last_name" binding:"omitempty"`
 	IsActive  *bool  `json:"is_active" binding:"omitempty"`
+	Role      string `json:"role" binding:"omitempty,oneof=admin user"`
 }
 
 // UserResponse representa la respuesta de usuario (sin contraseña)
@@ -42,6 +44,7 @@ type UserResponse struct {
 	Email     string `json:"email"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+	Role      string `json:"role"`
 	FullName  string `json:"full_name"`
 	IsActive  bool   `json:"is_active"`
 	CreatedAt string `json:"created_at"`
@@ -65,7 +68,12 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Password:  req.Password, // En un caso real, esto debería hashearse
+		Role:      req.Role,
 		IsActive:  true,
+	}
+
+	if user.Role == "" {
+		user.Role = "user"
 	}
 
 	if err := h.userUseCase.CreateUser(user); err != nil {
@@ -146,6 +154,9 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 	if req.IsActive != nil {
 		user.IsActive = *req.IsActive
+	}
+	if req.Role != "" {
+		user.Role = req.Role
 	}
 
 	if err := h.userUseCase.UpdateUser(user); err != nil {
@@ -231,6 +242,7 @@ func (h *UserHandler) toUserResponse(user *domain.User) UserResponse {
 		Email:     user.Email,
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
+		Role:      user.Role,
 		FullName:  user.GetFullName(),
 		IsActive:  user.IsActive,
 		CreatedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
