@@ -27,13 +27,3 @@ func SetupUserRoutes(router *gin.Engine, userHandler *handler.UserHandler, authM
 		userRoutes.DELETE("/:id", authMiddleware("admin"), userHandler.DeleteUser)
 	}
 }
-
-// O en el main.go o donde inicialices la aplicación:
-func setupRoutes(router *gin.Engine, userHandler *handler.UserHandler) {
-	// Rutas individuales
-	router.POST("/users", userHandler.CreateUser)
-	router.GET("/users", userHandler.ListUsers)
-	router.GET("/users/:id", userHandler.GetUser)
-	router.PUT("/users/:id", userHandler.UpdateUser)
-	router.DELETE("/users/:id", userHandler.DeleteUser)
-}

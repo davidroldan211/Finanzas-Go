@@ -26,10 +26,6 @@ type DatabaseConfig struct {
 	SSLMode  string `validate:"required"`
 }
 
-func (d *DatabaseConfig) GetDatabaseURL() any {
-	panic("unimplemented")
-}
-
 type JWTConfig struct {
 	Secret  string        `validate:"required"`
 	Expires time.Duration `validate:"required"`

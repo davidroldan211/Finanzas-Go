@@ -2,6 +2,7 @@ package routes
 
 import (
 	"finanzas-api/internal/auth/handler"
+
 	"github.com/gin-gonic/gin"
 )
 

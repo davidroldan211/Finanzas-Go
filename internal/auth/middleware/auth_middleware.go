@@ -5,24 +5,31 @@ import (
 	"strings"
 
 	"finanzas-api/shared/security"
+
 	"github.com/gin-gonic/gin"
 )
 
 type Middleware struct {
-	Secret string
+	Secret     string
+	ParseToken ParseTokenFunc
 }
 
-func NewMiddleware(secret string) *Middleware {
-	return &Middleware{Secret: secret}
+type ParseTokenFunc func(token, secret string) (*security.TokenClaims, error)
+
+func NewMiddleware(secret string, parseToken ParseTokenFunc) *Middleware {
+	return &Middleware{
+		Secret:     secret,
+		ParseToken: parseToken,
+	}
 }
 
 func (m *Middleware) Handler(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if strings.HasPrefix(authHeader, "Bearer ") {
-			authHeader = strings.TrimPrefix(authHeader, "Bearer ")
+		if after, ok := strings.CutPrefix(authHeader, "Bearer"); ok {
+			authHeader = after
 		}
-		claims, err := security.ParseToken(authHeader, m.Secret)
+		claims, err := m.ParseToken(authHeader, m.Secret)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return

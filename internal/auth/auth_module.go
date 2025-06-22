@@ -7,6 +7,7 @@ import (
 	"finanzas-api/internal/auth/middleware"
 	"finanzas-api/internal/auth/usecase"
 	userRepo "finanzas-api/internal/users/repository"
+	"finanzas-api/shared/security"
 
 	"gorm.io/gorm"
 )
@@ -21,6 +22,6 @@ func NewAuthModule(db *gorm.DB, cfg *config.Config) *AuthModule {
 	repo := userRepo.NewUserPostgresRepository(db)
 	uc := usecase.NewAuthUseCase(repo, cfg.JWT)
 	h := handler.NewAuthHandler(uc)
-	mw := middleware.NewMiddleware(cfg.JWT.Secret)
+	mw := middleware.NewMiddleware(cfg.JWT.Secret, security.ParseToken)
 	return &AuthModule{Handler: h, UseCase: uc, Middleware: mw}
 }
