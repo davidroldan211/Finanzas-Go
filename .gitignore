@@ -33,7 +33,7 @@ Thumbs.db
 
 # Archivos generados por herramientas de desarrollo
 .env
-.env.*
+
 
 # Módulos y dependencias descargadas
 vendor/
