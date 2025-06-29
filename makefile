@@ -1,35 +1,39 @@
 # Archivo Makefile (en raíz del proyecto)
 
-APP_NAME=mi-proyecto
-MAIN=./cmd/finanzas
+# Cargar variables desde archivo .env si existe
+ifneq (,$(wildcard .env))
+	include .env
+	export $(shell sed 's/=.*//' .env)
+endif
 
 .PHONY: run build clean test fmt lint help
 
-## Ejecuta la aplicación
+## run: Ejecuta la aplicación
 run:
-	go run $(MAIN)
+	go run $(APP_MAIN)
 
-## Compila el binario
+## build: Compila el binario
 build:
-	go build -o bin/$(APP_NAME) $(MAIN)
+	go build -o bin/$(APP_NAME) $(APP_MAIN)
 
-## Ejecuta tests
+## test: Ejecuta tests
 test:
 	go test ./...
 
-## Limpia binarios y cache
+## clean: Limpia binarios y cache
 clean:
 	go clean
 	rm -rf bin/
 
-## Linter con go vet
+## lint: Linter con go vet
 lint:
 	go vet ./...
 
-## Formatea el código
+## fmt: Formatea el código
 fmt:
 	go fmt ./...
 
-## Muestra los comandos disponibles
+## help: Muestra los comandos disponibles
 help:
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' Makefile | awk 'BEGIN {FS = ":.*?## "}; {printf " \033[36m%-12s\033[0m %s\n", $$1, $$2}'
+	@echo "Comandos disponibles:"
+	@grep -E '^##' $(MAKEFILE_LIST) | sed -e 's/^## //'

@@ -1,0 +1,47 @@
+name: CI Go
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      GO_VERSION: '1.22'
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Verificar versión de Go
+        run: go version
+
+      - name: Cargar variables del archivo .env (si existe)
+        run: |
+          if [ -f .env ]; then
+            cat .env >> $GITHUB_ENV
+          fi
+
+      - name: Instalar dependencias
+        run: go mod tidy
+
+      - name: Formatear código
+        run: make fmt
+
+      - name: Lint (go vet)
+        run: make lint
+
+      - name: Ejecutar pruebas
+        run: make test
+
+      - name: Compilar proyecto
+        run: make build
