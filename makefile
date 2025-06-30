@@ -50,3 +50,17 @@ fmt:
 help:
 	@echo "Comandos disponibles:"
 	@grep -E '^##' $(MAKEFILE_LIST) | sed -e 's/^## //'
+
+## coverage: Ejecuta tests y valida cobertura mínima
+coverage:
+	go test -coverprofile=coverage.out ./...
+	go tool cover -func=coverage.out
+	@threshold=80.0 ; \
+	actual=$$(go tool cover -func=coverage.out | grep total | awk '{print $$3}' | sed 's/%//') ; \
+	compare_result=$$(echo "$$actual >= $$threshold" | bc -l) ; \
+	if [ "$$compare_result" -eq 1 ]; then \
+		echo "✅ Cobertura suficiente ($$actual% >= $$threshold%)"; \
+	else \
+		echo "❌ Cobertura insuficiente ($$actual% < $$threshold%)"; \
+		exit 1; \
+	fi
