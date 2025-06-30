@@ -8,6 +8,10 @@ endif
 
 .PHONY: run build clean test fmt lint help
 
+APP_NAME?=mi-proyecto
+MAIN?=./cmd/finanzas
+
+
 ## run: Ejecuta la aplicación
 run:
 	go run $(APP_MAIN)
