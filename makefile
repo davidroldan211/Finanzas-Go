@@ -18,7 +18,16 @@ run:
 
 ## build: Compila el binario
 build:
-	go build -o bin/$(APP_NAME) $(APP_MAIN)
+	@if [ ! -d "$(MAIN)" ]; then \
+		echo "❌ ERROR: El directorio $(MAIN) no existe."; \
+		exit 1; \
+	fi
+	@if ! ls $(MAIN)/*.go > /dev/null 2>&1; then \
+		echo "❌ ERROR: No hay archivos Go en $(MAIN)."; \
+		exit 1; \
+	fi
+	@mkdir -p bin
+	go build -o bin/$(APP_NAME) $(MAIN)
 
 ## test: Ejecuta tests
 test:
