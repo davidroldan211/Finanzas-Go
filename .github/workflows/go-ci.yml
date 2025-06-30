@@ -67,5 +67,4 @@ jobs:
 
       - name: Ejecutar cobertura y generar reporte
         run: |
-          go test -coverprofile=coverage.out ./...
-          go tool cover -func=coverage.out
+          make coverage
