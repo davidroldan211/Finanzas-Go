@@ -5,6 +5,21 @@ La **Clean Architecture**, propuesta por Robert C. Martin (Uncle Bob), busca sep
 ![Texto alternativo](a1f9e6c33c27b9695b45d98ae6f7708b.jpg)
 
 ---
+## Estructura de Carpetas
+
+```
+proyecto/
+├── cmd/                    # Punto de entrada de la aplicación
+├── internal/              # Lógica del dominio y de aplicación
+│   ├── domain/           # Entidades y contratos (Enterprise Rules)
+│   ├── usecases/         # Casos de uso (Application Rules)
+│   ├── adapters/         # Adaptadores de interfaz (Controllers, Repos)
+│   └── infrastructure/   # Implementaciones externas (DB, Web, etc)
+├── pkg/                  # Librerías reutilizables
+└── docs/                 # Documentación
+```
+
+---
 
 ## DOMAIN
 **Contiene las reglas de negocio puras** del sistema. Es el núcleo de la arquitectura.
@@ -59,3 +74,159 @@ Actúa como "composición raíz" del sistema, donde se conectan los casos de uso
 
 
 
+## 📁 Descripción de Capas y Responsabilidades
+
+### 1. `domain/` - Enterprise Business Rules
+**Responsabilidad:** Modelar las entidades del negocio y sus reglas.
+
+Contiene:
+- Entidades puras del negocio
+- Validaciones de dominio
+- Contratos (interfaces) de repositorios
+
+Ejemplo: `User`, `Product`, `Order`, etc.
+
+#### Ejemplo:
+```go
+// internal/usecases/user_usecase.go
+package usecases
+
+import (
+    "errors"
+    "project/internal/domain"
+)
+
+type UserRepository interface {
+    Save(user domain.User) error
+}
+
+type UserUseCase struct {
+    repo UserRepository
+}
+
+func NewUserUseCase(r UserRepository) *UserUseCase {
+    return &UserUseCase{repo: r}
+}
+
+func (uc *UserUseCase) Register(email, name string) error {
+    user := domain.User{Email: email, Name: name}
+    if !user.IsValid() {
+        return errors.New("invalid user")
+    }
+    return uc.repo.Save(user)
+}
+```
+
+### 2. `usecases/` - Application Business Rules
+**Responsabilidad:** Coordinar la ejecución de acciones del negocio.
+
+Contiene:
+- Lógica de casos de uso
+- Orquestación entre entidades y adaptadores
+- Validaciones específicas de la aplicación
+
+Ejemplo: `RegisterUser`, `DeleteOrder`, `UpdateProfile`
+
+#### Ejemplo:
+```go
+// internal/usecases/user_usecase.go
+package usecases
+
+import (
+    "errors"
+    "project/internal/domain"
+)
+
+type UserRepository interface {
+    Save(user domain.User) error
+}
+
+type UserUseCase struct {
+    repo UserRepository
+}
+
+func NewUserUseCase(r UserRepository) *UserUseCase {
+    return &UserUseCase{repo: r}
+}
+
+func (uc *UserUseCase) Register(email, name string) error {
+    user := domain.User{Email: email, Name: name}
+    if !user.IsValid() {
+        return errors.New("invalid user")
+    }
+    return uc.repo.Save(user)
+}
+```
+
+### 3. `adapters/` - Interface Adapters
+**Responsabilidad:** Adaptar datos entre el mundo exterior y la lógica interna.
+
+Contiene:
+- Controladores HTTP
+- Presentadores/serializadores
+- Implementaciones concretas de interfaces (repositorios, gateways)
+
+Ejemplo: `UserController`, `UserRepositoryMySQL`, `UserJSONPresenter`
+
+#### Ejemplo:
+```go
+// internal/adapters/http/user_handler.go
+package http
+
+import (
+    "encoding/json"
+    "net/http"
+    "project/internal/usecases"
+)
+
+type UserHandler struct {
+    UC *usecases.UserUseCase
+}
+
+func (h *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
+    var req struct {
+        Email string `json:"email"`
+        Name  string `json:"name"`
+    }
+    _ = json.NewDecoder(r.Body).Decode(&req)
+    err := h.UC.Register(req.Email, req.Name)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+    w.WriteHeader(http.StatusCreated)
+}
+```
+
+### 4. `infrastructure/` - Frameworks & Drivers
+**Responsabilidad:** Implementaciones técnicas concretas, como DB, routers, etc.
+
+Contiene:
+- Configuración de base de datos
+- Inicialización de servidor HTTP
+- Conexiones externas (APIs, correo, archivos, etc)
+
+Ejemplo: `MySQLConnection`, `GinRouter`, `MailProvider`
+
+#### Ejemplo:
+```go
+// internal/infrastructure/mysql/user_repository.go
+package mysql
+
+import (
+    "database/sql"
+    "project/internal/domain"
+)
+
+type MySQLUserRepository struct {
+    DB *sql.DB
+}
+
+func (r *MySQLUserRepository) Save(user domain.User) error {
+    _, err := r.DB.Exec("INSERT INTO users (email, name) VALUES (?, ?)", user.Email, user.Name)
+    return err
+}
+```
+
+
+---

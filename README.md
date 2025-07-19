@@ -6,8 +6,7 @@ Sistema backend para la gestión de finanzas personales, desarrollado en Go con 
 
 ## 📁 Estructura del Proyecto
 
-El proyecto esta contruido siguiendo los lineamientos de Clean Architecture 
-[Clean Architecture ](Docs/ClearAchitecture.md)
+El proyecto esta construido siguiendo los lineamientos de [Clean Architecture ](docs/ClearAchitecture.md)
 
 ## ⚙️ Requisitos
 
@@ -76,7 +75,9 @@ make fmt       # Formatear código
 ```bash
 make lint      # Revisar calidad del código con go vet
 ```
-
+```bash 
+make coverage  # Valida cobertura de pruebas 
+```
 ## 📦 Tecnologías Utilizadas
 - Go (Golang)
 - Clean Architecture

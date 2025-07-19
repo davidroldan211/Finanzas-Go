@@ -53,14 +53,30 @@ help:
 
 ## coverage: Ejecuta tests y valida cobertura mínima
 coverage:
-	go test -coverprofile=coverage.out ./...
-	go tool cover -func=coverage.out
+	@echo ""
+	@echo "📦 Ejecutando pruebas y generando perfil de cobertura... "
+	@echo ""
+	@go test -coverprofile=coverage.out ./...
+
+	@echo ""
+	@echo "📊 Resumen de cobertura por función:"
+	@echo ""
+	@go tool cover -func=coverage.out
+
+	@echo ""
+	@echo "🔍 Verificando umbral mínimo de cobertura..."
+	@echo ""
 	@threshold=80.0 ; \
 	actual=$$(go tool cover -func=coverage.out | grep total | awk '{print $$3}' | sed 's/%//') ; \
 	compare_result=$$(echo "$$actual >= $$threshold" | bc -l) ; \
 	if [ "$$compare_result" -eq 1 ]; then \
-		echo "✅ Cobertura suficiente ($$actual% >= $$threshold%)"; \
+		echo ""; \
+		echo "\033[1;32m✅ Cobertura suficiente:\033[0m $$actual% >= $$threshold%" ; \
+		echo ""; \
 	else \
-		echo "❌ Cobertura insuficiente ($$actual% < $$threshold%)"; \
-		exit 1; \
+		echo ""; \
+		echo "\033[1;31m❌ Cobertura insuficiente:\033[0m Actual = $$actual% < Deseado = $$threshold%" ; \
+		echo ""; \
+		exit 1 ; \
 	fi
+	
