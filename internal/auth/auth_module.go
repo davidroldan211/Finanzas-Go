@@ -4,8 +4,8 @@ import (
 	"finanzas-api/config"
 	"finanzas-api/internal/auth/domain"
 	"finanzas-api/internal/auth/handler"
-	"finanzas-api/internal/auth/middleware"
 	"finanzas-api/internal/auth/usecase"
+	"finanzas-api/internal/middleware"
 	userRepo "finanzas-api/internal/users/repository"
 	"finanzas-api/shared/security"
 

@@ -4,17 +4,10 @@ Sistema backend para la gestión de finanzas personales, desarrollado en Go con 
 
 ---
 
-## 📚 Tabla de Contenido
-
-- [Principios de Clean Architecture](#📁 Estructura del Proyecto)
-- [Estructura de Carpetas](#estructura-de-carpetas)
-- [Dependencias y Librerías](#dependencias-y-librerías)
-- [Cómo Ejecutar](#cómo-ejecutar)
-- [Pruebas](#pruebas)
-- [Ejemplo de Flujo](#ejemplo-de-flujo)
-- [Contribuciones](#contribuciones)
-
 ## 📁 Estructura del Proyecto
+
+El proyecto esta contruido siguiendo los lineamientos de Clean Architecture 
+[Clean Architecture ](Docs/ClearAchitecture.md)
 
 ## ⚙️ Requisitos
 
