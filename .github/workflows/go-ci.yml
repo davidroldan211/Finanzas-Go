@@ -2,69 +2,73 @@ name: CI Go
 
 on:
   push:
-    branches: [ main ]
+    branches: 
+      - 'feature/**'
   pull_request:
-    branches: [ main ]
+    branches: 
+      - main
 
 env:
   GO_VERSION: '1.22'
 
 jobs:
-  build:
+  build-and-lint:
+    name: 🧱 Build & Lint
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout código
+      - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: Configurar Go
+      - name: 🛠️ Configurar Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Verificar versión de Go
+      - name: 🧪 Mostrar versión de Go
         run: go version
 
-      - name: Cargar variables del archivo .env (si existe)
+      - name: 📦 Cargar variables desde .env
         run: |
           if [ -f .env ]; then
             cat .env >> $GITHUB_ENV
           fi
 
-      - name: Instalar dependencias
+      - name: 📥 Instalar dependencias
         run: go mod tidy
 
-      - name: Formatear código
+      - name:  🎨 Formatear código
         run: make fmt
 
-      - name: Lint (go vet)
+      - name: 🔎 Lint (go vet)
         run: make lint
 
-      - name: Compilar proyecto
+      - name: 🏗️ Compilar proyecto
         run: make build
 
   test:
+    name: 🧪 Test & Coverage
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-and-lint
 
     steps:
-      - name: Checkout código
+      - name: ⬇️ Checkout código
         uses: actions/checkout@v3
 
-      - name: Configurar Go
+      - name: 🛠️ Configurar Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Cargar variables del archivo .env (si existe)
+      - name: 📦 Cargar variables del archivo .env (si existe)
         run: |
           if [ -f .env ]; then
             cat .env >> $GITHUB_ENV
           fi
 
-      - name: Ejecutar pruebas
+      - name: ✅ Ejecutar pruebas
         run: make test
 
-      - name: Ejecutar cobertura y generar reporte
+      - name: 📊 Ejecutar cobertura y generar reporte
         run: |
           make coverage
