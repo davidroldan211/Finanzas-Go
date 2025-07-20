@@ -9,8 +9,8 @@ La **Clean Architecture**, propuesta por Robert C. Martin (Uncle Bob), busca sep
 
 ```
 proyecto/
-├── cmd/                    # Punto de entrada de la aplicación
-├── internal/              # Lógica del dominio y de aplicación
+├── cmd/                  # Punto de entrada de la aplicación
+├── internal/             # Lógica del dominio y de aplicación
 │   ├── domain/           # Entidades y contratos (Enterprise Rules)
 │   ├── usecases/         # Casos de uso (Application Rules)
 │   ├── adapters/         # Adaptadores de interfaz (Controllers, Repos)
