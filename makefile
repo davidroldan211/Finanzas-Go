@@ -1,4 +1,4 @@
-# Archivo Makefile (en raíz del proyecto)
+# Archivo Makefile (en raíz del proyecto).
 
 # Cargar variables desde archivo .env si existe
 ifneq (,$(wildcard .env))
