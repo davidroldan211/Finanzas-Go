@@ -5,7 +5,7 @@ services:
     image: postgres:14.3
     restart: always
     ports:
-      - "${DB_PORT}:5432"  # Puerto externo desde variable de entorno.
+      - "${DB_PORT}:5432"  # Puerto externo desde variable de entorno
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
