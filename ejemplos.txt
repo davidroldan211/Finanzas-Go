@@ -16,6 +16,6 @@
   "email": "carlos.martinez@example.com",
   "password": "ClaveFuerte789",
   "first_name": "Carlos",
-  "last_name": "Martínez",
+  "last_name": "Roldan",
   "is_active": false
 }
