@@ -2,7 +2,7 @@
 
 La **Clean Architecture**, propuesta por Robert C. Martin (Uncle Bob), busca separar los componentes de un sistema en capas independientes, de forma que cada una tenga una responsabilidad clara y el flujo de dependencias siempre vaya desde el exterior hacia el centro.
 
-![Modelo clean Architecture](a1f9e6c33c27b9695b45d98ae6f7708b.jpg)
+![Modelo clean Architecture.](a1f9e6c33c27b9695b45d98ae6f7708b.jpg)
 
 ---
 ## Estructura de Carpetas
