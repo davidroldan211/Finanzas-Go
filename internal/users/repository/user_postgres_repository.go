@@ -3,6 +3,7 @@ package repository
 import (
 	"finanzas-api/internal/users/domain"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -18,7 +19,7 @@ func (r *userPostgresRepository) Create(user *domain.User) error {
 	return r.db.Create(user).Error
 }
 
-func (r *userPostgresRepository) GetByID(id uint) (*domain.User, error) {
+func (r *userPostgresRepository) GetByID(id uuid.UUID) (*domain.User, error) {
 	var user domain.User
 	if err := r.db.First(&user, id).Error; err != nil {
 		return nil, err
@@ -38,7 +39,7 @@ func (r *userPostgresRepository) Update(user *domain.User) error {
 	return r.db.Save(user).Error
 }
 
-func (r *userPostgresRepository) Delete(id uint) error {
+func (r *userPostgresRepository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&domain.User{}, id).Error // soft delete
 }
 
