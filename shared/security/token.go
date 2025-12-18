@@ -8,15 +8,17 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type TokenClaims struct {
-	UserID uint   `json:"user_id"`
-	Role   string `json:"role"`
-	Exp    int64  `json:"exp"`
+	UserID uuid.UUID `json:"user_id"`
+	Role   string    `json:"role"`
+	Exp    int64     `json:"exp"`
 }
 
-func GenerateToken(userID uint, role string, secret string, duration time.Duration) (string, error) {
+func GenerateToken(userID uuid.UUID, role string, secret string, duration time.Duration) (string, error) {
 	claims := TokenClaims{
 		UserID: userID,
 		Role:   role,

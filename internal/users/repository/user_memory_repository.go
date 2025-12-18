@@ -5,20 +5,22 @@ import (
 	"finanzas-api/internal/users/domain"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type userRepositoryMemory struct {
-	users  map[uint]*domain.User
-	emails map[string]uint
-	nextID uint
+	users  map[uuid.UUID]*domain.User
+	emails map[string]uuid.UUID
+	nextID uuid.UUID
 	mutex  sync.RWMutex
 }
 
 func NewUserMemoryRepository() domain.UserRepository {
 	return &userRepositoryMemory{
-		users:  make(map[uint]*domain.User),
-		emails: make(map[string]uint),
-		nextID: 1,
+		users:  make(map[uuid.UUID]*domain.User),
+		emails: make(map[string]uuid.UUID),
+		nextID: uuid.New(),
 	}
 }
 
@@ -33,7 +35,7 @@ func (r *userRepositoryMemory) Create(user *domain.User) error {
 
 	// Asignar ID y timestamps
 	user.ID = r.nextID
-	r.nextID++
+	r.nextID = uuid.New()
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
 
@@ -44,7 +46,7 @@ func (r *userRepositoryMemory) Create(user *domain.User) error {
 	return nil
 }
 
-func (r *userRepositoryMemory) GetByID(id uint) (*domain.User, error) {
+func (r *userRepositoryMemory) GetByID(id uuid.UUID) (*domain.User, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -105,7 +107,7 @@ func (r *userRepositoryMemory) Update(user *domain.User) error {
 	return nil
 }
 
-func (r *userRepositoryMemory) Delete(id uint) error {
+func (r *userRepositoryMemory) Delete(id uuid.UUID) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 

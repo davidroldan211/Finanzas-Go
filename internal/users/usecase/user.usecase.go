@@ -5,6 +5,8 @@ import (
 	"finanzas-api/internal/users/domain"
 	"finanzas-api/shared/security"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 type UserUseCase struct {
@@ -44,8 +46,8 @@ func (uc *UserUseCase) CreateUser(user *domain.User) error {
 }
 
 // DeleteUser implements domain.UserUseCase.
-func (uc *UserUseCase) DeleteUser(id uint) error {
-	if id == 0 {
+func (uc *UserUseCase) DeleteUser(id uuid.UUID) error {
+	if id == uuid.Nil {
 		return errors.New("invalid user ID")
 	}
 
@@ -68,8 +70,8 @@ func (uc *UserUseCase) GetUserByEmail(email string) (*domain.User, error) {
 }
 
 // GetUserByID implements domain.UserUseCase.
-func (uc *UserUseCase) GetUserByID(id uint) (*domain.User, error) {
-	if id == 0 {
+func (uc *UserUseCase) GetUserByID(id uuid.UUID) (*domain.User, error) {
+	if id == uuid.Nil {
 		return nil, errors.New("invalid user ID")
 	}
 
@@ -96,7 +98,7 @@ func (uc *UserUseCase) ListUsers(limit int, offset int) ([]*domain.User, error) 
 
 // UpdateUser implements domain.UserUseCase.
 func (uc *UserUseCase) UpdateUser(user *domain.User) error {
-	if user.ID == 0 {
+	if user.ID == uuid.Nil {
 		return errors.New("user ID is required")
 	}
 

@@ -3,11 +3,12 @@ package domain
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type User struct {
-	ID        uint           `json:"id" gorm:"primaryKey"`
+	ID        uuid.UUID      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	Email     string         `json:"email" gorm:"uniqueIndex;not null"`
 	Password  string         `json:"-" gorm:"not null"` // El "-" oculta la contraseña en JSON
 	FirstName string         `json:"first_name" gorm:"not null"`
@@ -22,20 +23,20 @@ type User struct {
 // UserRepository define la interfaz del repositorio de usuarios
 type UserRepository interface {
 	Create(user *User) error
-	GetByID(id uint) (*User, error)
+	GetByID(id uuid.UUID) (*User, error)
 	GetByEmail(email string) (*User, error)
 	Update(user *User) error
-	Delete(id uint) error
+	Delete(id uuid.UUID) error
 	List(limit, offset int) ([]*User, error)
 	EmailExists(email string) (bool, error)
 }
 
 type UserUseCase interface {
 	CreateUser(user *User) error
-	GetUserByID(id uint) (*User, error)
+	GetUserByID(id uuid.UUID) (*User, error)
 	GetUserByEmail(email string) (*User, error)
 	UpdateUser(user *User) error
-	DeleteUser(id uint) error
+	DeleteUser(id uuid.UUID) error
 	ListUsers(limit, offset int) ([]*User, error)
 	ValidateUserData(user *User) error
 }
@@ -53,6 +54,14 @@ func (u *User) GetFullName() string {
 // IsValidForAuth verifica si el usuario puede autenticarse
 func (u *User) IsValidForAuth() bool {
 	return u.IsActive && u.DeletedAt.Time.IsZero()
+}
+
+// BeforeCreate asegura que el usuario tenga un UUID válido antes de persistirlo
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return nil
 }
 
 // ValidateEmail verifica si el email tiene un formato válido

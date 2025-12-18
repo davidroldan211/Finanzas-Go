@@ -7,6 +7,7 @@ import (
 	"finanzas-api/internal/users/domain"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type UserHandler struct {
@@ -40,15 +41,15 @@ type UpdateUserRequest struct {
 
 // UserResponse representa la respuesta de usuario (sin contraseña)
 type UserResponse struct {
-	ID        uint   `json:"id"`
-	Email     string `json:"email"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Role      string `json:"role"`
-	FullName  string `json:"full_name"`
-	IsActive  bool   `json:"is_active"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
+	Email     string    `json:"email"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	Role      string    `json:"role"`
+	FullName  string    `json:"full_name"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt string    `json:"created_at"`
+	UpdatedAt string    `json:"updated_at"`
 }
 
 // CreateUser maneja la creación de nuevos usuarios
@@ -92,7 +93,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 // GetUser obtiene un usuario por ID
 func (h *UserHandler) GetUser(c *gin.Context) {
 	idParam := c.Param("id")
-	id, err := strconv.ParseUint(idParam, 10, 32)
+	id, err := uuid.Parse(idParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid user ID",
@@ -100,7 +101,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userUseCase.GetUserByID(uint(id))
+	user, err := h.userUseCase.GetUserByID(uuid.UUID(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "User not found",
@@ -116,7 +117,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 // UpdateUser actualiza un usuario
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	idParam := c.Param("id")
-	id, err := strconv.ParseUint(idParam, 10, 32)
+	id, err := uuid.Parse(idParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid user ID",
@@ -134,7 +135,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	// Obtener usuario existente
-	user, err := h.userUseCase.GetUserByID(uint(id))
+	user, err := h.userUseCase.GetUserByID(uuid.UUID(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "User not found",
@@ -175,7 +176,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 // DeleteUser elimina un usuario
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	idParam := c.Param("id")
-	id, err := strconv.ParseUint(idParam, 10, 32)
+	id, err := uuid.Parse(idParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid user ID",
@@ -183,7 +184,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.userUseCase.DeleteUser(uint(id)); err != nil {
+	if err := h.userUseCase.DeleteUser(uuid.UUID(id)); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "User not found",
 		})

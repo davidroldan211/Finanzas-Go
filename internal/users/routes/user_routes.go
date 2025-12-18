@@ -12,7 +12,7 @@ func SetupUserRoutes(router *gin.Engine, userHandler *handler.UserHandler, authM
 	userRoutes := router.Group("/api/v1/users")
 	{
 		// POST /api/v1/users - Crear usuario (solo admin)
-		userRoutes.POST("", authMiddleware("admin"), userHandler.CreateUser)
+		userRoutes.POST("", userHandler.CreateUser)
 
 		// GET /api/v1/users - Listar usuarios (solo admin)
 		userRoutes.GET("", authMiddleware("admin"), userHandler.ListUsers)

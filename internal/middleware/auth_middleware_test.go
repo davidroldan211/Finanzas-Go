@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 // Mock: token válido con rol admin
 func mockParseTokenAdmin(token, secret string) (*security.TokenClaims, error) {
 	return &security.TokenClaims{
-		UserID: 123,
+		UserID: uuid.MustParse("12345678-1234-1234-1234-123456789012"),
 		Role:   "admin",
 		Exp:    9999999999,
 	}, nil
@@ -23,7 +24,7 @@ func mockParseTokenAdmin(token, secret string) (*security.TokenClaims, error) {
 // Mock: token válido con rol user
 func mockParseTokenUser(token, secret string) (*security.TokenClaims, error) {
 	return &security.TokenClaims{
-		UserID: 123,
+		UserID: uuid.MustParse("12345678-1234-1234-1234-123456789012"),
 		Role:   "user",
 		Exp:    9999999999,
 	}, nil
