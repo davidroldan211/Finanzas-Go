@@ -18,10 +18,10 @@ func SetupUserRoutes(router *gin.Engine, userHandler *handler.UserHandler, authM
 		userRoutes.GET("", authMiddleware("admin"), userHandler.ListUsers)
 
 		// GET /api/v1/users/:id - Obtener usuario por ID
-		userRoutes.GET("/:id", authMiddleware("admin", "user"), userHandler.GetUser)
+		userRoutes.GET("/:id", authMiddleware("user", "admin"), userHandler.GetUser)
 
 		// PUT /api/v1/users/:id - Actualizar usuario
-		userRoutes.PUT("/:id", authMiddleware("admin", "user"), userHandler.UpdateUser)
+		userRoutes.PUT("/:id", authMiddleware("user", "admin"), userHandler.UpdateUser)
 
 		// DELETE /api/v1/users/:id - Eliminar usuario (solo admin)
 		userRoutes.DELETE("/:id", authMiddleware("admin"), userHandler.DeleteUser)

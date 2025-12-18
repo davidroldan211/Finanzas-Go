@@ -25,15 +25,26 @@ func main() {
 		panic(fmt.Sprintf("Error loading configuration: %v", err))
 	}
 
+	r = gin.Default()
+
 	switch config.App.Environment {
+	case "development":
+		gin.SetMode(gin.DebugMode)
+		log.Println("⚙️ Running in development mode")
+		// r.SetTrustedProxies(nil)
 	case "production":
 		gin.SetMode(gin.ReleaseMode)
+		log.Println("💯 Running in production mode")
+		r.SetTrustedProxies([]string{"192.168.1.100"}) // Ejemplo de IP confiable
 	case "test":
 		gin.SetMode(gin.TestMode)
+		log.Println("🛠️ Running in test mode")
+		r.SetTrustedProxies(nil)
 	default:
 		gin.SetMode(gin.DebugMode)
+		log.Println("Running in default (development) mode")
+		r.SetTrustedProxies(nil)
 	}
-	r = gin.Default()
 
 	db, err = DataBase.NewPostgresDB(config)
 	if err != nil {

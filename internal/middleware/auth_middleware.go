@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -25,10 +26,22 @@ func NewMiddleware(secret string, parseToken ParseTokenFunc) *Middleware {
 
 func (m *Middleware) Handler(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if after, ok := strings.CutPrefix(authHeader, "Bearer"); ok {
-			authHeader = after
+		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
+		if authHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
 		}
+
+		fields := strings.Fields(authHeader)
+		if len(fields) > 0 && strings.EqualFold(fields[0], "bearer") {
+			if len(fields) < 2 {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+				return
+			}
+			authHeader = fields[1]
+		}
+
+		authHeader = strings.TrimSpace(authHeader)
 		claims, err := m.ParseToken(authHeader, m.Secret)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
@@ -49,6 +62,7 @@ func (m *Middleware) Handler(roles ...string) gin.HandlerFunc {
 		}
 		c.Set("userID", claims.UserID)
 		c.Set("userRole", claims.Role)
+		log.Printf("Authenticated user ID: %d with role: %s", claims.UserID, claims.Role)
 		c.Next()
 	}
 }

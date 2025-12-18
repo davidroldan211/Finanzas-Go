@@ -93,3 +93,22 @@ func TestMiddleware_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "ok")
 }
+
+func TestMiddleware_SuccessWithExtraSpaces(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	r := gin.New()
+	m := NewMiddleware("test-secret", mockParseTokenAdmin)
+	r.GET("/protected", m.Handler("admin"), func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+	})
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	req.Header.Set("Authorization", "  Bearer    validtoken   ")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "ok")
+}

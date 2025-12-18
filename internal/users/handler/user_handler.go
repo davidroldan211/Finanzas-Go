@@ -68,7 +68,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		Email:     req.Email,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
-		Password:  req.Password, // En un caso real, esto debería hashearse
+		Password:  req.Password,
 		Role:      req.Role,
 		IsActive:  true,
 	}
