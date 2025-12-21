@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"finanzas-api/internal/users/domain"
+	"finanzas-api/internal/verification/domain"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -16,6 +16,9 @@ func NewVerificationPostgresRepository(db *gorm.DB) domain.VerificationRepositor
 }
 
 func (r *verificationPostgresRepository) Create(v *domain.Verification) error {
+	if v.ID == uuid.Nil {
+		v.ID = uuid.New()
+	}
 	return r.db.Create(v).Error
 }
 

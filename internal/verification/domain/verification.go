@@ -25,20 +25,17 @@ type VerificationRepository interface {
 	Delete(id uuid.UUID) error
 }
 
-// VerificationUseCase define las operaciones de aplicación para verificación.
 type VerificationUseCase interface {
 	GenerateVerificationCode(email string) (string, error)
-	ValidateVerificationCode(ID uuid.UUID, email, code string) (bool, error)
-	SendVerificationCode(ID uuid.UUID, email string) error
-	CleanupExpiredCodes() error
+	// ValidateVerificationCode(ID uuid.UUID, email, code string) (bool, error)
+	// SendVerificationCode(ID uuid.UUID, email string) error
+	// CleanupExpiredCodes() error
 }
 
-// TableName especifica el nombre de la tabla en la base de datos
 func (Verification) TableName() string {
 	return "verifications"
 }
 
-// BeforeCreate asegura que el Verification tenga un UUID válido antes de persistirlo
 func (v *Verification) BeforeCreate(tx interface{}) error {
 	if v.ID == uuid.Nil {
 		v.ID = uuid.New()

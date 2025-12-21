@@ -6,6 +6,8 @@ import (
 	authRoutes "finanzas-api/internal/auth/routes"
 	"finanzas-api/internal/users"
 	userRoutes "finanzas-api/internal/users/routes"
+	"finanzas-api/internal/verification"
+	verificationRoutes "finanzas-api/internal/verification/routes"
 	DataBase "finanzas-api/shared/db"
 	"fmt"
 	"log"
@@ -54,9 +56,11 @@ func main() {
 
 	userModule := users.NewUsersModule(db)
 	authModule := auth.NewAuthModule(db, config)
+	verifyModule := verification.NewVerificationModule(db)
 
 	authRoutes.SetupAuthRoutes(r, authModule.Handler)
 	userRoutes.SetupUserRoutes(r, userModule.Handler, authModule.Middleware.Handler)
+	verificationRoutes.SetupVerificationRoutes(r, verifyModule.Handler)
 
 	log.Println("🚀 Servidor iniciado en " + config.Server.Host + ":" + strconv.Itoa(config.Server.Port))
 	r.Run(config.Server.Host + ":" + strconv.Itoa(config.Server.Port))
