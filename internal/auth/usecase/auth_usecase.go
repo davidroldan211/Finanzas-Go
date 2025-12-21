@@ -8,16 +8,16 @@ import (
 	"finanzas-api/shared/security"
 )
 
-type AuthUseCase struct {
+type AuthService struct {
 	userRepo  userDomain.UserRepository
 	jwtConfig config.JWTConfig
 }
 
-func NewAuthUseCase(repo userDomain.UserRepository, cfg config.JWTConfig) *AuthUseCase {
-	return &AuthUseCase{userRepo: repo, jwtConfig: cfg}
+func NewAuthService(repo userDomain.UserRepository, cfg config.JWTConfig) *AuthService {
+	return &AuthService{userRepo: repo, jwtConfig: cfg}
 }
 
-func (uc *AuthUseCase) Login(email, password string) (string, error) {
+func (uc *AuthService) Login(email, password string) (string, error) {
 	user, err := uc.userRepo.GetByEmail(email)
 	if err != nil {
 		return "", errors.New("invalid credentials")

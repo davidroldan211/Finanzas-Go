@@ -16,43 +16,62 @@ func NewUserPostgresRepository(db *gorm.DB) domain.UserRepository {
 }
 
 func (r *userPostgresRepository) Create(user *domain.User) error {
-	return r.db.Create(user).Error
+	m := toModel(user)
+	// Genera ID si viene vacío
+	if m.ID == uuid.Nil {
+		m.ID = uuid.New()
+	}
+	if err := r.db.Create(m).Error; err != nil {
+		return err
+	}
+	*user = *toDomain(m)
+	return nil
 }
 
 func (r *userPostgresRepository) GetByID(id uuid.UUID) (*domain.User, error) {
-	var user domain.User
-	if err := r.db.First(&user, id).Error; err != nil {
+	var m userModel
+	if err := r.db.First(&m, id).Error; err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return toDomain(&m), nil
 }
 
 func (r *userPostgresRepository) GetByEmail(email string) (*domain.User, error) {
-	var user domain.User
-	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
+	var m userModel
+	if err := r.db.Where("email = ?", email).First(&m).Error; err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return toDomain(&m), nil
 }
 
 func (r *userPostgresRepository) Update(user *domain.User) error {
-	return r.db.Save(user).Error
+	m := toModel(user)
+	if err := r.db.Save(m).Error; err != nil {
+		return err
+	}
+	*user = *toDomain(m)
+	return nil
 }
 
 func (r *userPostgresRepository) Delete(id uuid.UUID) error {
-	return r.db.Delete(&domain.User{}, id).Error // soft delete
+	r.db.Model(&userModel{}).Where("id = ?", id).Update("is_active", false)
+	return r.db.Delete(&userModel{}, id).Error // soft delete
 }
 
 func (r *userPostgresRepository) List(limit, offset int) ([]*domain.User, error) {
-	var users []*domain.User
-	if err := r.db.Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+	var models []*userModel
+	if err := r.db.Limit(limit).Offset(offset).Find(&models).Error; err != nil {
 		return nil, err
+	}
+	users := make([]*domain.User, 0, len(models))
+	for _, m := range models {
+		users = append(users, toDomain(m))
 	}
 	return users, nil
 }
 
 func (r *userPostgresRepository) EmailExists(email string) (bool, error) {
 	var count int64
-	err := r.db.Model(&domain.User{}).Where("email = ? AND deleted_at IS NULL", email).Count(&count).Error
+	err := r.db.Model(&userModel{}).Where("email = ? AND deleted_at IS NULL", email).Count(&count).Error
 	return count > 0, err
 }

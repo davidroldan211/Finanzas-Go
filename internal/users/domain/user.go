@@ -4,20 +4,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type User struct {
-	ID        uuid.UUID      `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	Email     string         `json:"email" gorm:"uniqueIndex;not null"`
-	Password  string         `json:"-" gorm:"not null"` // El "-" oculta la contraseña en JSON
-	FirstName string         `json:"first_name" gorm:"not null"`
-	LastName  string         `json:"last_name" gorm:"not null"`
-	Role      string         `json:"role" gorm:"default:'user'"`
-	IsActive  bool           `json:"is_active" gorm:"default:true"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"` // Soft delete
+	ID        uuid.UUID  `json:"id"`
+	Email     string     `json:"email"`
+	Password  string     `json:"-"` // El "-" oculta la contraseña en JSON
+	FirstName string     `json:"first_name"`
+	LastName  string     `json:"last_name"`
+	Role      string     `json:"role"`
+	IsActive  bool       `json:"is_active"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"-"` // Soft delete
 }
 
 // UserRepository define la interfaz del repositorio de usuarios
@@ -31,6 +30,7 @@ type UserRepository interface {
 	EmailExists(email string) (bool, error)
 }
 
+// UserUseCase define las operaciones de aplicación para usuarios.
 type UserUseCase interface {
 	CreateUser(user *User) error
 	GetUserByID(id uuid.UUID) (*User, error)
@@ -53,24 +53,17 @@ func (u *User) GetFullName() string {
 
 // IsValidForAuth verifica si el usuario puede autenticarse
 func (u *User) IsValidForAuth() bool {
-	return u.IsActive && u.DeletedAt.Time.IsZero()
-}
-
-// BeforeCreate asegura que el usuario tenga un UUID válido antes de persistirlo
-func (u *User) BeforeCreate(tx *gorm.DB) error {
-	if u.ID == uuid.Nil {
-		u.ID = uuid.New()
-	}
-	return nil
+	return u.IsActive && (u.DeletedAt == nil || u.DeletedAt.IsZero())
 }
 
 // ValidateEmail verifica si el email tiene un formato válido
 func (u *User) ValidateEmail() bool {
-	// Implementación básica de validación de email
+	//TODO: Implementar una validación de email más robusta
 	return len(u.Email) > 0 && len(u.Email) <= 255
 }
 
 // ValidateNames verifica si los nombres son válidos
 func (u *User) ValidateNames() bool {
+	//TODO: Implementar una validación de nombres más robusta
 	return len(u.FirstName) > 0 && len(u.LastName) > 0
 }
