@@ -9,18 +9,19 @@ import (
 	"github.com/google/uuid"
 )
 
-type UserUseCase struct {
+type userService struct {
 	userRepo domain.UserRepository
 }
 
 func NewUserUseCase(UserRepo domain.UserRepository) domain.UserUseCase {
-	return &UserUseCase{
+	return &userService{
 		userRepo: UserRepo,
 	}
 }
 
+// TODO: Se debe ajustar para que el crear usuario valide bearear token una vez que se implemente la validacion de correos
 // CreateUser implements domain.UserUseCase.
-func (uc *UserUseCase) CreateUser(user *domain.User) error {
+func (uc *userService) CreateUser(user *domain.User) error {
 	// Validar datos del usuario
 	if err := uc.ValidateUserData(user); err != nil {
 		return err
@@ -46,7 +47,7 @@ func (uc *UserUseCase) CreateUser(user *domain.User) error {
 }
 
 // DeleteUser implements domain.UserUseCase.
-func (uc *UserUseCase) DeleteUser(id uuid.UUID) error {
+func (uc *userService) DeleteUser(id uuid.UUID) error {
 	if id == uuid.Nil {
 		return errors.New("invalid user ID")
 	}
@@ -61,7 +62,7 @@ func (uc *UserUseCase) DeleteUser(id uuid.UUID) error {
 }
 
 // GetUserByEmail implements domain.UserUseCase.
-func (uc *UserUseCase) GetUserByEmail(email string) (*domain.User, error) {
+func (uc *userService) GetUserByEmail(email string) (*domain.User, error) {
 	if email == "" {
 		return nil, errors.New("email is required")
 	}
@@ -70,7 +71,7 @@ func (uc *UserUseCase) GetUserByEmail(email string) (*domain.User, error) {
 }
 
 // GetUserByID implements domain.UserUseCase.
-func (uc *UserUseCase) GetUserByID(id uuid.UUID) (*domain.User, error) {
+func (uc *userService) GetUserByID(id uuid.UUID) (*domain.User, error) {
 	if id == uuid.Nil {
 		return nil, errors.New("invalid user ID")
 	}
@@ -79,7 +80,7 @@ func (uc *UserUseCase) GetUserByID(id uuid.UUID) (*domain.User, error) {
 }
 
 // ListUsers implements domain.UserUseCase.
-func (uc *UserUseCase) ListUsers(limit int, offset int) ([]*domain.User, error) {
+func (uc *userService) ListUsers(limit int, offset int) ([]*domain.User, error) {
 	if limit < 0 || offset < 0 {
 		return nil, errors.New("limit and offset must be non-negative")
 	}
@@ -97,7 +98,7 @@ func (uc *UserUseCase) ListUsers(limit int, offset int) ([]*domain.User, error) 
 }
 
 // UpdateUser implements domain.UserUseCase.
-func (uc *UserUseCase) UpdateUser(user *domain.User) error {
+func (uc *userService) UpdateUser(user *domain.User) error {
 	if user.ID == uuid.Nil {
 		return errors.New("user ID is required")
 	}
@@ -128,7 +129,7 @@ func (uc *UserUseCase) UpdateUser(user *domain.User) error {
 }
 
 // ValidateUserData implements domain.UserUseCase.
-func (uc *UserUseCase) ValidateUserData(user *domain.User) error {
+func (uc *userService) ValidateUserData(user *domain.User) error {
 	if user == nil {
 		return errors.New("user is required")
 	}

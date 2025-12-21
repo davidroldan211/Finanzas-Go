@@ -20,7 +20,7 @@ type AuthModule struct {
 
 func NewAuthModule(db *gorm.DB, cfg *config.Config) *AuthModule {
 	repo := userRepo.NewUserPostgresRepository(db)
-	uc := usecase.NewAuthUseCase(repo, cfg.JWT)
+	uc := usecase.NewAuthService(repo, cfg.JWT)
 	h := handler.NewAuthHandler(uc)
 	mw := middleware.NewMiddleware(cfg.JWT.Secret, security.ParseToken)
 	return &AuthModule{Handler: h, UseCase: uc, Middleware: mw}
