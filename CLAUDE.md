@@ -8,50 +8,52 @@ Este archivo da guía a Claude Code (claude.ai/code) al trabajar con código en 
 make run       # go run ./cmd/finanzas
 make build     # compila binario a bin/
 make test      # go test ./...
-make lint      # go vet ./...
+make lint      # go vet ./... + make arch
+make arch      # verifica que domain/application/port no importen gin/gorm/config/httpx
 make fmt       # go fmt ./...
 make coverage  # test + reporte de cobertura, falla si total < 5%
 ```
 
-Test individual: `go test ./internal/auth/handler/... -run TestName -v`
+Test individual: `go test ./internal/users/application/... -run TestName -v`
 
-Requiere Docker (`docker compose up -d`) para Postgres, y archivo `.env` (ver `.env.template`) — `config.LoadConfig()` llama `godotenv.Load()` y hace `log.Fatal` si falta `.env`.
+Requiere Docker (`docker compose up -d`) para Postgres, y archivo `.env` (ver `.env.template`) — `config.LoadConfig()` llama `godotenv.Load()` y hace `log.Fatal` si falta `.env`. Las migraciones en `db/migrations/*.sql` se aplican a mano (no hay `AutoMigrate` ni herramienta de migración).
 
 ## Arquitectura
 
-Clean Architecture modular en Go, por módulo bajo `internal/<modulo>/`. Cada módulo tiene 4 capas más un archivo de wiring:
+Arquitectura hexagonal (puertos y adaptadores) modular en Go, por módulo bajo `internal/<modulo>/`:
 
 ```
 internal/<modulo>/
-  domain/      # struct entidad + interfaz Repository + interfaz UseCase (los contratos)
-  usecase/     # implementa la interfaz UseCase, depende solo de la interfaz Repository
-  repository/  # implementa la interfaz Repository contra GORM/Postgres (tiene su propio modelo de DB, separado de la entidad domain)
-  handler/     # handlers HTTP de Gin, depende de la interfaz UseCase
-  routes/      # registro de rutas Gin, conectado con el handler
-  <modulo>_module.go  # composition root: arma repo -> usecase -> handler para este módulo
+  domain/               # entidad pura + sentinelas de error; sin tags json/gorm, sin uuid.Nil como "válido"
+  port/in/               # puerto de entrada: interfaz <Modulo>Service + Commands/Queries que consume el adaptador in
+  port/out/               # puertos de salida: interfaces que consume application (Repository, PasswordHasher, TokenProvider...)
+  application/            # implementa port/in; depende SOLO de port/out — nunca de gin, gorm, config ni httpx
+  adapter/in/http/         # handlers Gin + DTOs + routes + traducción de errores de dominio a httpx.AppError
+  adapter/out/postgres/    # implementa port/out contra GORM; tiene su propio modelo de DB + mappers toDomain/toModel
+  <modulo>_module.go       # composition root del módulo: arma adapter/out -> application -> adapter/in
 ```
 
-Módulos existentes: `auth`, `users`, `verification`. `middleware` (guard de auth/rol JWT) vive en `internal/middleware`, no dentro de un módulo.
+Módulos existentes: `auth`, `users`, `verification`. Regla verificada por `make arch`: **`domain`, `port/*` y `application` nunca importan `gin`, `gorm`, `finanzas-api/config` ni `internal/httpx`** — esas dependencias están confinadas a `adapter/*`. Al agregar una funcionalidad: definir/extender el puerto primero (`port/in` si es una operación nueva expuesta, `port/out` si es una dependencia externa nueva), implementar en `application`, exponer vía `adapter/in/http`.
 
-Dependencias siempre apuntan hacia adentro, hacia las interfaces de `domain` (repository y usecase son interfaces definidas en `domain`, las implementaciones concretas viven en las capas externas) — al agregar una funcionalidad, definir/extender primero la interfaz en `domain`, luego implementar en `usecase`/`repository`, luego exponer vía `handler`/`routes`.
+`cmd/finanzas/main.go` es el composition root general: carga config, abre la DB, construye los adaptadores de seguridad compartidos (`security.NewBcryptHasher`, `security.NewHMACTokenProvider`), construye cada `<modulo>.NewModule(db, ...)` y registra sus rutas. Para agregar un módulo nuevo, seguir este mismo patrón y registrarlo en `main.go`.
 
-`cmd/finanzas/main.go` es el composition root general de la app: carga config, abre la DB, construye cada `<modulo>.New<Modulo>Module(db, ...)`, luego llama cada `Setup<Modulo>Routes(r, ...)`. Para agregar un módulo nuevo, seguir este mismo patrón de wiring y registrarlo en `main.go`.
+**Cómo `auth` lee usuarios sin acoplarse a `users`:** `auth` NO reutiliza el repositorio de `users`. Tiene su propio adaptador de salida read-only (`internal/auth/adapter/out/postgres/user_credentials_repository.go`) con una proyección de 5 columnas sobre la misma tabla `users` — la fuente de verdad del esquema sigue siendo `db/migrations/users.sql`. Es el patrón a replicar si otro módulo necesita leer datos de un módulo distinto: un adaptador de salida propio, nunca importar el paquete de infraestructura ajeno.
 
-Nota: `auth` reutiliza `users/repository` directamente (no tiene repository propio) porque auth solo necesita buscar usuarios por email/password.
+**El guard de auth** (`internal/auth/adapter/in/http/auth_guard.go`, tipo `Guard`) recibe un `port/out.TokenProvider` por constructor — no un secreto ni una función suelta. `Module.Guard()` lo expone como `httpx.AuthGuard` (`type AuthGuard func(roles ...string) gin.HandlerFunc`, definido en `internal/httpx/gin.go`), que es lo que otros módulos reciben para proteger sus rutas sin importar `auth` — solo importan `httpx`.
 
 ### Piezas transversales
 
-- `config/env.config.go` — config tipada cargada desde variables de entorno (secciones `Database`, `JWT`, `Server`, `App`), cada una con defaults vía `getEnv`/`getEnvAsInt`.
-- `shared/db/postgres.go` — setup de conexión GORM Postgres (`NewPostgresDB`).
-- `shared/security/token.go` — token tipo JWT hecho a mano con HMAC-SHA256 (`GenerateToken`/`ParseToken`), no es una librería JWT.
-- `shared/security/password.go` — hashing con bcrypt.
-- `internal/middleware/auth_middleware.go` — `Middleware.Handler(roles ...string)` retorna un middleware de Gin que parsea el bearer token y opcionalmente exige pertenencia a rol; setea `userID`/`userRole` en el contexto de Gin.
-- `internal/httpx/apperr.go` — tipo `AppError` con status/code/message/fields y funciones factory (`httpx.BadRequest`, `httpx.NotFound`, `httpx.Validation`, etc.) para respuestas de error de API consistentes; usar `httpx.Wrap(err)` como último recurso para convertir a un `AppError` 500.
+- `config/env.config.go` — config tipada desde variables de entorno (`Database`, `JWT`, `Server`, `App`). Solo `main.go` la importa; ningún módulo la conoce.
+- `internal/shared/db/postgres.go` — setup de conexión GORM Postgres (`NewPostgresDB`), usado solo por `main.go`.
+- `internal/shared/security/bcrypt_hasher.go` — `BcryptHasher` implementa a la vez `users/port/out.PasswordHasher` (`Hash`) y `auth/port/out.PasswordVerifier` (`Matches`); se construye una sola vez en `main.go` y se inyecta en ambos módulos.
+- `internal/shared/security/hmac_token_provider.go` — `HMACTokenProvider` implementa `auth/port/out.TokenProvider` (`Issue`/`Verify`) con HMAC-SHA256 hecho a mano (no es una librería JWT); guarda el secreto y el TTL, valida el header `alg`. Mantiene el tag JSON `user_id` en el payload por compatibilidad con tokens emitidos antes de la migración a hexagonal.
+- `internal/httpx/apperr.go` + `internal/httpx/gin.go` — `AppError` (status/code/message/fields) con factories (`httpx.BadRequest`, `httpx.NotFound`, `httpx.Conflict`, `httpx.Validation`, etc.) y su adaptador Gin: `httpx.Abort(c, err)` escribe el envelope `{"error":{"code","message","fields"}}` y nunca filtra el mensaje interno de un error 5xx (solo lo loguea server-side); `httpx.BindJSON(c, &dst)` hace bind + valida, respondiendo 422 con `fields` poblados o 400 si el body no es JSON.
 
 ### Ruteo
 
-Todas las rutas se montan bajo `/api/v1` directamente en el `*gin.Engine` compartido en `main.go` (no hay engine por módulo). La protección de rutas se aplica por ruta vía `authMiddleware("rol1", "rol2")` pasado a `Setup<Modulo>Routes`.
+Todas las rutas se montan bajo `/api/v1` directamente en el `*gin.Engine` compartido en `main.go`. La protección de rutas se aplica por ruta vía `guard("rol1", "rol2")` (tipo `httpx.AuthGuard`) pasado a cada `Setup<Modulo>Routes`/`RegisterRoutes`.
 
-### IDs
+### IDs y errores
 
-`User.ID` es un `google/uuid.UUID`, no un int autoincremental — mantener esto consistente al agregar entidades/repositories que referencien usuarios.
+- `User.ID` es un `google/uuid.UUID` directo en el dominio (no un tipo propio envuelto) — deliberado: evita el riesgo de que GORM pierda `driver.Valuer` al mapear la PK. Los adaptadores de salida siempre usan `.Where("id = ?", id)` explícito, nunca la condición posicional `First(&m, id)`.
+- Los repositorios traducen `gorm.ErrRecordNotFound` a un sentinel de dominio (p.ej. `domain.ErrUserNotFound`) **dentro del adaptador de salida**; `application` y `adapter/in/http` nunca ven un error de GORM directamente.

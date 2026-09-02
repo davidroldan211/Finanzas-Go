@@ -6,7 +6,7 @@ ifneq (,$(wildcard .env))
 	export $(shell sed 's/=.*//' .env)
 endif
 
-.PHONY: run build clean test fmt lint help
+.PHONY: run build clean test fmt lint arch help
 
 APP_NAME?=mi-proyecto
 MAIN?=./cmd/finanzas
@@ -39,8 +39,19 @@ clean:
 	rm -rf bin/
 
 ## lint: Linter con go vet
-lint:
+lint: arch
 	go vet ./...
+
+## arch: Verifica que el núcleo hexagonal (domain/application/port) no
+## dependa de frameworks ni de infraestructura
+arch:
+	@echo "🏛️  Verificando fronteras de la arquitectura hexagonal..."
+	@! grep -RIn --include='*.go' \
+		-E '"(github.com/gin-gonic|gorm.io|finanzas-api/config|finanzas-api/internal/httpx)' \
+		internal/*/domain internal/*/application internal/*/port 2>/dev/null \
+		| grep -v '_test.go' \
+		|| (echo "\033[1;31m❌ El núcleo (domain/application/port) importa infraestructura\033[0m"; exit 1)
+	@echo "\033[1;32m✅ Núcleo limpio de infraestructura\033[0m"
 
 ## fmt: Formatea el código
 fmt:
@@ -66,7 +77,7 @@ coverage:
 	@echo ""
 	@echo "🔍 Verificando umbral mínimo de cobertura..."
 	@echo ""
-	@threshold=5.0 ; \
+	@threshold=35.0 ; \
 	actual=$$(go tool cover -func=coverage.out | grep total | awk '{print $$3}' | sed 's/%//') ; \
 	compare_result=$$(echo "$$actual >= $$threshold" | bc -l) ; \
 	if [ "$$compare_result" -eq 1 ]; then \
