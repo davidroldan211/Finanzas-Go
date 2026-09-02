@@ -4,6 +4,49 @@ El proyecto sigue **Arquitectura Hexagonal**, propuesta por Alistair Cockburn: e
 
 ---
 
+## Flujo de una petición
+
+Toda petición HTTP recorre las mismas capas, sin importar el módulo. Las líneas punteadas marcan los dos casos especiales: un corte por error que responde directo al cliente sin llegar al núcleo, y los dos únicos puntos donde un error de infraestructura se traduce a un error de dominio (o de dominio a HTTP).
+
+```mermaid
+flowchart LR
+    Client[Cliente]
+    Router[Router<br/>gin.Engine]
+    Guard[Guard<br/>auth_guard.go]
+    Handler[Handler<br/>adapter/in/http]
+    Repo[Repositorio<br/>adapter/out/postgres]
+    DB[(PostgreSQL)]
+
+    subgraph Core["núcleo · sin gin / gorm / config (make arch)"]
+        App{{"Aplicación<br/>application + domain"}}
+    end
+
+    Client -->|HTTP request| Router
+    Router -->|ruta pública| Handler
+    Router -.->|ruta protegida| Guard
+    Guard -->|token válido| Handler
+    Guard -.->|401 / 403| Client
+    Handler -.->|400 / 422 validación| Client
+    Handler -->|Command| App
+    App -->|port/out.Repository| Repo
+    Repo -->|SQL / GORM| DB
+    DB -->|filas| Repo
+    Repo -.->|gorm.Err → domain.Err| App
+    App -->|*domain.User / err| Handler
+    Handler -->|200/201 o error JSON| Client
+```
+
+El Guard solo se ejecuta en rutas protegidas (por ejemplo `GET/PUT/DELETE /users`, no en `POST /users` ni `/login`). Un token inválido en el Guard o un body inválido en el Handler cortan la petición ahí mismo — nunca llegan a `application`. El Repositorio traduce `gorm.ErrRecordNotFound` (y errores similares) a un sentinel de `domain`; el Handler traduce ese sentinel a un `httpx.AppError`. Nada entre esos dos puntos conoce GORM ni el formato de respuesta HTTP.
+
+Dos ejemplos reales del mismo camino:
+
+| Petición | Códigos posibles | Nota |
+|---|---|---|
+| `POST /api/v1/users` | `201` creado · `422` validación · `409` email duplicado | Ruta pública, sin Guard. El `409` sale de `application` (`domain.ErrEmailTaken`), no de la base de datos. |
+| `GET /api/v1/users/:id` | `200` ok · `401` sin token · `403` rol incorrecto · `404` no encontrado | Pasa por el Guard primero. El `404` nace como `gorm.ErrRecordNotFound` en el Repositorio y llega traducido hasta el cliente. |
+
+---
+
 ## Estructura por módulo
 
 Cada módulo de negocio (`auth`, `users`, `verification`) vive bajo `internal/<modulo>/` con esta forma:
