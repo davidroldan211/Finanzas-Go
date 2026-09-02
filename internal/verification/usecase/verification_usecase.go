@@ -1,7 +1,9 @@
 package usecase
 
 import (
+	"errors"
 	"finanzas-api/internal/verification/domain"
+	"strings"
 )
 
 type verificationUseCase struct {
@@ -16,20 +18,10 @@ func NewVerificationUseCase(repo domain.VerificationRepository) domain.Verificat
 
 // GenerateVerificationCode implements domain.UseCase.
 func (uc *verificationUseCase) GenerateVerificationCode(email string) (string, error) {
-	// TODO: implementar generación de código, persistencia y envío.
+	if strings.TrimSpace(email) == "" {
+		return "", errors.New("email is required")
+	}
 	return "", nil
 }
 
-// // CleanupExpiredCodes implements domain.UseCase.
-// func (uc *verificationUseCase) CleanupExpiredCodes() error {
-// 	panic("unimplemented")
-// }
-
-// // ValidateVerificationCode implements domain.UseCase.
-// func (uc *verificationUseCase) ValidateVerificationCode(ID uuid.UUID, email string, code string) (bool, error) {
-// 	panic("unimplemented")
-// }
-
-// func (uc *verificationUseCase) SendVerificationCode(ID uuid.UUID, email string) error {
-// 	panic("unimplemented")
-// }
+//TODO: CleanupExpiredCodes,ValidateVerificationCode,SendVerificationCode

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"log"
 	"net/http"
 
 	"finanzas-api/internal/verification/domain"
@@ -27,11 +26,9 @@ func (h *VerificationHandler) VerifyEmail(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
-
 	if _, err := h.uc.GenerateVerificationCode(req.Email); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	log.Printf("Verification email sent to: %s", req.Email)
 	c.JSON(http.StatusOK, gin.H{"message": "Verification email sent"})
 }
