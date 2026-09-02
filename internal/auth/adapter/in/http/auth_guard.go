@@ -1,11 +1,11 @@
-package middleware
+package http
 
 import (
 	"log"
-	"net/http"
+	nethttp "net/http"
 	"strings"
 
-	"finanzas-api/shared/security"
+	"finanzas-api/internal/shared/security"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,14 +28,14 @@ func (m *Middleware) Handler(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
 		if authHeader == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			c.AbortWithStatusJSON(nethttp.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}
 
 		fields := strings.Fields(authHeader)
 		if len(fields) > 0 && strings.EqualFold(fields[0], "bearer") {
 			if len(fields) < 2 {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+				c.AbortWithStatusJSON(nethttp.StatusUnauthorized, gin.H{"error": "unauthorized"})
 				return
 			}
 			authHeader = fields[1]
@@ -44,7 +44,7 @@ func (m *Middleware) Handler(roles ...string) gin.HandlerFunc {
 		authHeader = strings.TrimSpace(authHeader)
 		claims, err := m.ParseToken(authHeader, m.Secret)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			c.AbortWithStatusJSON(nethttp.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}
 		if len(roles) > 0 {
@@ -56,7 +56,7 @@ func (m *Middleware) Handler(roles ...string) gin.HandlerFunc {
 				}
 			}
 			if !allowed {
-				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+				c.AbortWithStatusJSON(nethttp.StatusForbidden, gin.H{"error": "forbidden"})
 				return
 			}
 		}

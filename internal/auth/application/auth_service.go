@@ -1,12 +1,12 @@
-package usecase
+package application
 
 import (
 	"context"
 	"errors"
 
 	"finanzas-api/config"
+	"finanzas-api/internal/shared/security"
 	userOut "finanzas-api/internal/users/port/out"
-	"finanzas-api/shared/security"
 )
 
 // NOTA: auth reutiliza aquí el puerto de salida de users (userOut.UserRepository)

@@ -1,8 +1,8 @@
-package middleware
+package http
 
 import (
 	"errors"
-	"finanzas-api/shared/security"
+	"finanzas-api/internal/shared/security"
 	"net/http"
 	"net/http/httptest"
 	"testing"

@@ -2,26 +2,25 @@ package auth
 
 import (
 	"finanzas-api/config"
+	authhttp "finanzas-api/internal/auth/adapter/in/http"
+	"finanzas-api/internal/auth/application"
 	"finanzas-api/internal/auth/domain"
-	"finanzas-api/internal/auth/handler"
-	"finanzas-api/internal/auth/usecase"
-	"finanzas-api/internal/middleware"
+	"finanzas-api/internal/shared/security"
 	userRepo "finanzas-api/internal/users/adapter/out/postgres"
-	"finanzas-api/shared/security"
 
 	"gorm.io/gorm"
 )
 
 type AuthModule struct {
-	Handler    *handler.AuthHandler
+	Handler    *authhttp.AuthHandler
 	UseCase    domain.AuthUseCase
-	Middleware *middleware.Middleware
+	Middleware *authhttp.Middleware
 }
 
 func NewAuthModule(db *gorm.DB, cfg *config.Config) *AuthModule {
 	repo := userRepo.NewUserPostgresRepository(db)
-	uc := usecase.NewAuthService(repo, cfg.JWT)
-	h := handler.NewAuthHandler(uc)
-	mw := middleware.NewMiddleware(cfg.JWT.Secret, security.ParseToken)
+	uc := application.NewAuthService(repo, cfg.JWT)
+	h := authhttp.NewAuthHandler(uc)
+	mw := authhttp.NewMiddleware(cfg.JWT.Secret, security.ParseToken)
 	return &AuthModule{Handler: h, UseCase: uc, Middleware: mw}
 }

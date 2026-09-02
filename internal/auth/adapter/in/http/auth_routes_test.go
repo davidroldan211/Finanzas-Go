@@ -1,8 +1,7 @@
-package routes
+package http
 
 import (
 	"errors"
-	"finanzas-api/internal/auth/handler"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,13 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockAuthUseCase struct {
-	loginFunc func(email, password string) (string, error)
-}
-
-func (m *mockAuthUseCase) Login(email, password string) (string, error) {
-	return m.loginFunc(email, password)
-}
+// mockAuthUseCase se define una sola vez en auth_handler_test.go; ambos
+// archivos comparten paquete tras la mudanza a adapter/in/http.
 
 func TestLogin_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -30,7 +24,7 @@ func TestLogin_Success(t *testing.T) {
 	}
 
 	router := gin.New()
-	h := handler.NewAuthHandler(mockUseCase)
+	h := NewAuthHandler(mockUseCase)
 	SetupAuthRoutes(router, h)
 
 	w := httptest.NewRecorder()
@@ -54,7 +48,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 	}
 
 	router := gin.New()
-	h := handler.NewAuthHandler(mockUseCase)
+	h := NewAuthHandler(mockUseCase)
 	SetupAuthRoutes(router, h)
 
 	w := httptest.NewRecorder()
@@ -78,7 +72,7 @@ func TestLogin_WrongMethod(t *testing.T) {
 	}
 
 	router := gin.New()
-	h := handler.NewAuthHandler(mockUseCase)
+	h := NewAuthHandler(mockUseCase)
 	SetupAuthRoutes(router, h)
 
 	w := httptest.NewRecorder()
