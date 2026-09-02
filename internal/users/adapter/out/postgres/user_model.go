@@ -9,7 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// userModel representa la estructura de persistencia para Gorm.
+// userModel representa la estructura de persistencia para Gorm. No es la
+// entidad de dominio: solo los mappers de este archivo cruzan la frontera.
 type userModel struct {
 	ID        uuid.UUID `gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	Email     string    `gorm:"uniqueIndex;not null"`
@@ -34,16 +35,16 @@ func toDomain(m *userModel) *domain.User {
 		deletedAt = &m.DeletedAt.Time
 	}
 	return &domain.User{
-		ID:        m.ID,
-		Email:     m.Email,
-		Password:  m.Password,
-		FirstName: m.FirstName,
-		LastName:  m.LastName,
-		Role:      m.Role,
-		IsActive:  m.IsActive,
-		CreatedAt: m.CreatedAt,
-		UpdatedAt: m.UpdatedAt,
-		DeletedAt: deletedAt,
+		ID:           m.ID,
+		Email:        m.Email,
+		PasswordHash: m.Password,
+		FirstName:    m.FirstName,
+		LastName:     m.LastName,
+		Role:         m.Role,
+		IsActive:     m.IsActive,
+		CreatedAt:    m.CreatedAt,
+		UpdatedAt:    m.UpdatedAt,
+		DeletedAt:    deletedAt,
 	}
 }
 
@@ -54,7 +55,7 @@ func toModel(u *domain.User) *userModel {
 	m := &userModel{
 		ID:        u.ID,
 		Email:     u.Email,
-		Password:  u.Password,
+		Password:  u.PasswordHash,
 		FirstName: u.FirstName,
 		LastName:  u.LastName,
 		Role:      u.Role,

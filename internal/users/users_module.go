@@ -4,29 +4,28 @@ import (
 	userhttp "finanzas-api/internal/users/adapter/in/http"
 	"finanzas-api/internal/users/adapter/out/postgres"
 	"finanzas-api/internal/users/application"
-	"finanzas-api/internal/users/domain"
+	"finanzas-api/internal/users/port/in"
+	"finanzas-api/internal/users/port/out"
 
 	"gorm.io/gorm"
 )
 
-type UsersModule struct {
-	Handler    *userhttp.UserHandler
-	UseCase    domain.UserUseCase
-	repository domain.UserRepository
+// Module es el composition root del módulo users: arma el adaptador de
+// salida, la aplicación y el adaptador de entrada.
+type Module struct {
+	Service in.UserService
+	Handler *userhttp.UserHandler
 }
 
-func NewUsersModule(db *gorm.DB) *UsersModule {
-	var userRepo domain.UserRepository
-	var userUseCase domain.UserUseCase
-	var userHandler *userhttp.UserHandler
+// NewModule construye el módulo. hasher es un puerto de salida
+// compartido (satisfecho hoy por *security.BcryptHasher desde main).
+func NewModule(db *gorm.DB, hasher out.PasswordHasher) *Module {
+	repo := postgres.NewUserPostgresRepository(db)
+	svc := application.NewUserService(repo, hasher)
+	handler := userhttp.NewUserHandler(svc)
 
-	userRepo = postgres.NewUserPostgresRepository(db)
-	userUseCase = application.NewUserUseCase(userRepo)
-	userHandler = userhttp.NewUserHandler(userUseCase)
-
-	return &UsersModule{
-		Handler:    userHandler,
-		UseCase:    userUseCase,
-		repository: userRepo,
+	return &Module{
+		Service: svc,
+		Handler: handler,
 	}
 }

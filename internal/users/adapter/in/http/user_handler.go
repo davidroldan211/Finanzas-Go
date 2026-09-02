@@ -4,226 +4,113 @@ import (
 	nethttp "net/http"
 	"strconv"
 
-	"finanzas-api/internal/users/domain"
+	"finanzas-api/internal/httpx"
+	"finanzas-api/internal/users/port/in"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type UserHandler struct {
-	userUseCase domain.UserUseCase
+	userService in.UserService
 }
 
-// NewUserHandler crea una nueva instancia del handler de usuarios
-func NewUserHandler(userUseCase domain.UserUseCase) *UserHandler {
-	return &UserHandler{
-		userUseCase: userUseCase,
-	}
+// NewUserHandler crea una nueva instancia del handler de usuarios.
+func NewUserHandler(userService in.UserService) *UserHandler {
+	return &UserHandler{userService: userService}
 }
 
-// CreateUserRequest representa la estructura de la petición para crear usuario
-type CreateUserRequest struct {
-	Email     string `json:"email" binding:"required,email"`
-	FirstName string `json:"first_name" binding:"required"`
-	LastName  string `json:"last_name" binding:"required"`
-	Password  string `json:"password" binding:"required,min=6"`
-	Role      string `json:"role" binding:"omitempty,oneof=admin user"`
-}
-
-// UpdateUserRequest representa la estructura de la petición para actualizar usuario
-type UpdateUserRequest struct {
-	Email     string `json:"email" binding:"omitempty,email"`
-	FirstName string `json:"first_name" binding:"omitempty"`
-	LastName  string `json:"last_name" binding:"omitempty"`
-	IsActive  *bool  `json:"is_active" binding:"omitempty"`
-	Role      string `json:"role" binding:"omitempty,oneof=admin user"`
-}
-
-// UserResponse representa la respuesta de usuario (sin contraseña)
-type UserResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Email     string    `json:"email"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	Role      string    `json:"role"`
-	FullName  string    `json:"full_name"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt string    `json:"created_at"`
-	UpdatedAt string    `json:"updated_at"`
-}
-
-// CreateUser maneja la creación de nuevos usuarios
+// CreateUser maneja la creación de nuevos usuarios.
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req CreateUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(nethttp.StatusBadRequest, gin.H{
-			"error":   "Invalid request data",
-			"details": err.Error(),
-		})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
-	// Crear el usuario
-	user := &domain.User{
-		Email:     req.Email,
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Password:  req.Password,
-		Role:      req.Role,
-		IsActive:  true,
-	}
-
-	if user.Role == "" {
-		user.Role = "user"
-	}
-
-	if err := h.userUseCase.CreateUser(user); err != nil {
-		c.JSON(nethttp.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+	user, err := h.userService.Create(c.Request.Context(), req.toCommand())
+	if err != nil {
+		httpx.Abort(c, toAppError(err))
 		return
 	}
 
 	c.JSON(nethttp.StatusCreated, gin.H{
 		"message": "User created successfully",
-		"user":    h.toUserResponse(user),
+		"user":    toUserResponse(user),
 	})
 }
 
-// GetUser obtiene un usuario por ID
+// GetUser obtiene un usuario por ID.
 func (h *UserHandler) GetUser(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(nethttp.StatusBadRequest, gin.H{
-			"error": "Invalid user ID",
-		})
+		httpx.Abort(c, httpx.BadRequest("ID de usuario inválido."))
 		return
 	}
 
-	user, err := h.userUseCase.GetUserByID(uuid.UUID(id))
+	user, err := h.userService.GetByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(nethttp.StatusNotFound, gin.H{
-			"error": "User not found",
-		})
+		httpx.Abort(c, toAppError(err))
 		return
 	}
 
-	c.JSON(nethttp.StatusOK, gin.H{
-		"user": h.toUserResponse(user),
-	})
+	c.JSON(nethttp.StatusOK, gin.H{"user": toUserResponse(user)})
 }
 
-// UpdateUser actualiza un usuario
+// UpdateUser actualiza un usuario.
 func (h *UserHandler) UpdateUser(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(nethttp.StatusBadRequest, gin.H{
-			"error": "Invalid user ID",
-		})
+		httpx.Abort(c, httpx.BadRequest("ID de usuario inválido."))
 		return
 	}
 
 	var req UpdateUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(nethttp.StatusBadRequest, gin.H{
-			"error":   "Invalid request data",
-			"details": err.Error(),
-		})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
-	// Obtener usuario existente
-	user, err := h.userUseCase.GetUserByID(uuid.UUID(id))
+	user, err := h.userService.Update(c.Request.Context(), req.toCommand(id))
 	if err != nil {
-		c.JSON(nethttp.StatusNotFound, gin.H{
-			"error": "User not found",
-		})
-		return
-	}
-
-	// Actualizar campos si se proporcionan
-	if req.Email != "" {
-		user.Email = req.Email
-	}
-	if req.FirstName != "" {
-		user.FirstName = req.FirstName
-	}
-	if req.LastName != "" {
-		user.LastName = req.LastName
-	}
-	if req.IsActive != nil {
-		user.IsActive = *req.IsActive
-	}
-	if req.Role != "" {
-		user.Role = req.Role
-	}
-
-	if err := h.userUseCase.UpdateUser(user); err != nil {
-		c.JSON(nethttp.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+		httpx.Abort(c, toAppError(err))
 		return
 	}
 
 	c.JSON(nethttp.StatusOK, gin.H{
 		"message": "User updated successfully",
-		"user":    h.toUserResponse(user),
+		"user":    toUserResponse(user),
 	})
 }
 
-// DeleteUser elimina un usuario
+// DeleteUser elimina un usuario.
 func (h *UserHandler) DeleteUser(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(nethttp.StatusBadRequest, gin.H{
-			"error": "Invalid user ID",
-		})
+		httpx.Abort(c, httpx.BadRequest("ID de usuario inválido."))
 		return
 	}
 
-	if err := h.userUseCase.DeleteUser(uuid.UUID(id)); err != nil {
-		c.JSON(nethttp.StatusNotFound, gin.H{
-			"error": "User not found",
-		})
+	if err := h.userService.Delete(c.Request.Context(), id); err != nil {
+		httpx.Abort(c, toAppError(err))
 		return
 	}
 
-	c.JSON(nethttp.StatusOK, gin.H{
-		"message": "User deleted successfully",
-	})
+	c.JSON(nethttp.StatusOK, gin.H{"message": "User deleted successfully"})
 }
 
-// ListUsers obtiene una lista de usuarios
+// ListUsers obtiene una lista de usuarios.
 func (h *UserHandler) ListUsers(c *gin.Context) {
-	// Obtener parámetros de paginación
-	limitStr := c.DefaultQuery("limit", "10")
-	offsetStr := c.DefaultQuery("offset", "0")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit < 0 {
-		limit = 10
-	}
-
-	offset, err := strconv.Atoi(offsetStr)
-	if err != nil || offset < 0 {
-		offset = 0
-	}
-
-	users, err := h.userUseCase.ListUsers(limit, offset)
+	users, err := h.userService.List(c.Request.Context(), in.ListUsersQuery{Limit: limit, Offset: offset})
 	if err != nil {
-		c.JSON(nethttp.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		httpx.Abort(c, toAppError(err))
 		return
 	}
 
-	// Convertir a respuesta
-	var userResponses []UserResponse
+	userResponses := make([]UserResponse, 0, len(users))
 	for _, user := range users {
-		userResponses = append(userResponses, h.toUserResponse(user))
+		userResponses = append(userResponses, toUserResponse(user))
 	}
 
 	c.JSON(nethttp.StatusOK, gin.H{
@@ -234,19 +121,4 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 			"count":  len(userResponses),
 		},
 	})
-}
-
-// toUserResponse convierte un usuario del dominio a respuesta HTTP
-func (h *UserHandler) toUserResponse(user *domain.User) UserResponse {
-	return UserResponse{
-		ID:        user.ID,
-		Email:     user.Email,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Role:      user.Role,
-		FullName:  user.GetFullName(),
-		IsActive:  user.IsActive,
-		CreatedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt: user.UpdatedAt.Format("2006-01-02T15:04:05Z"),
-	}
 }

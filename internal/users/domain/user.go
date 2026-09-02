@@ -1,69 +1,129 @@
 package domain
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
 
+const (
+	RoleAdmin = "admin"
+	RoleUser  = "user"
+)
+
+// User es la entidad de dominio pura: sin tags de transporte (json) ni de
+// persistencia (gorm). Nunca se serializa directamente ni se mapea 1:1 a
+// una tabla; eso es responsabilidad de los adaptadores de entrada y salida.
 type User struct {
-	ID        uuid.UUID  `json:"id"`
-	Email     string     `json:"email"`
-	Password  string     `json:"-"` // El "-" oculta la contraseña en JSON
-	FirstName string     `json:"first_name"`
-	LastName  string     `json:"last_name"`
-	Role      string     `json:"role"`
-	IsActive  bool       `json:"is_active"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"-"` // Soft delete
+	ID           uuid.UUID
+	Email        string
+	PasswordHash string
+	FirstName    string
+	LastName     string
+	Role         string
+	IsActive     bool
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DeletedAt    *time.Time // soft delete
 }
 
-// UserRepository define la interfaz del repositorio de usuarios
-type UserRepository interface {
-	Create(user *User) error
-	GetByID(id uuid.UUID) (*User, error)
-	GetByEmail(email string) (*User, error)
-	Update(user *User) error
-	Delete(id uuid.UUID) error
-	List(limit, offset int) ([]*User, error)
-	EmailExists(email string) (bool, error)
+// NewUser construye un User validando las invariantes de negocio.
+// passwordHash debe venir ya hasheado: el hashing es responsabilidad de la
+// aplicación a través del puerto PasswordHasher, nunca del dominio.
+func NewUser(email, firstName, lastName, passwordHash, role string) (*User, error) {
+	email = normalizeEmail(email)
+	firstName = strings.TrimSpace(firstName)
+	lastName = strings.TrimSpace(lastName)
+	if role == "" {
+		role = RoleUser
+	}
+
+	if fields := validateUserFields(email, firstName, lastName); len(fields) > 0 {
+		return nil, &ValidationError{Fields: fields}
+	}
+
+	return &User{
+		Email:        email,
+		FirstName:    firstName,
+		LastName:     lastName,
+		PasswordHash: passwordHash,
+		Role:         role,
+		IsActive:     true,
+	}, nil
 }
 
-// UserUseCase define las operaciones de aplicación para usuarios.
-type UserUseCase interface {
-	CreateUser(user *User) error
-	GetUserByID(id uuid.UUID) (*User, error)
-	GetUserByEmail(email string) (*User, error)
-	UpdateUser(user *User) error
-	DeleteUser(id uuid.UUID) error
-	ListUsers(limit, offset int) ([]*User, error)
-	ValidateUserData(user *User) error
+// ApplyUpdate aplica cambios parciales (nil = no cambiar) validando las
+// invariantes del resultado antes de mutar el usuario.
+func (u *User) ApplyUpdate(email, firstName, lastName, role *string, isActive *bool) error {
+	newEmail := u.Email
+	if email != nil {
+		newEmail = normalizeEmail(*email)
+	}
+	newFirstName := u.FirstName
+	if firstName != nil {
+		newFirstName = strings.TrimSpace(*firstName)
+	}
+	newLastName := u.LastName
+	if lastName != nil {
+		newLastName = strings.TrimSpace(*lastName)
+	}
+
+	if fields := validateUserFields(newEmail, newFirstName, newLastName); len(fields) > 0 {
+		return &ValidationError{Fields: fields}
+	}
+
+	u.Email = newEmail
+	u.FirstName = newFirstName
+	u.LastName = newLastName
+	if role != nil && *role != "" {
+		u.Role = *role
+	}
+	if isActive != nil {
+		u.IsActive = *isActive
+	}
+	return nil
 }
 
-// TableName especifica el nombre de la tabla en la base de datos
-func (User) TableName() string {
-	return "users"
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }
 
-// GetFullName retorna el nombre completo del usuario
+func validateUserFields(email, firstName, lastName string) map[string]string {
+	fields := map[string]string{}
+
+	switch {
+	case email == "":
+		fields["email"] = "el email es obligatorio"
+	case !strings.Contains(email, "@"):
+		fields["email"] = "formato de email inválido"
+	case len(email) > 255:
+		fields["email"] = "el email es demasiado largo"
+	}
+
+	switch {
+	case firstName == "":
+		fields["first_name"] = "el nombre es obligatorio"
+	case len(firstName) > 100:
+		fields["first_name"] = "el nombre es demasiado largo"
+	}
+
+	switch {
+	case lastName == "":
+		fields["last_name"] = "el apellido es obligatorio"
+	case len(lastName) > 100:
+		fields["last_name"] = "el apellido es demasiado largo"
+	}
+
+	return fields
+}
+
+// GetFullName retorna el nombre completo del usuario.
 func (u *User) GetFullName() string {
 	return u.FirstName + " " + u.LastName
 }
 
-// IsValidForAuth verifica si el usuario puede autenticarse
+// IsValidForAuth verifica si el usuario puede autenticarse.
 func (u *User) IsValidForAuth() bool {
-	return u.IsActive && (u.DeletedAt == nil || u.DeletedAt.IsZero())
-}
-
-// ValidateEmail verifica si el email tiene un formato válido
-func (u *User) ValidateEmail() bool {
-	//TODO: Implementar una validación de email más robusta
-	return len(u.Email) > 0 && len(u.Email) <= 255
-}
-
-// ValidateNames verifica si los nombres son válidos
-func (u *User) ValidateNames() bool {
-	//TODO: Implementar una validación de nombres más robusta
-	return len(u.FirstName) > 0 && len(u.LastName) > 0
+	return u.IsActive && u.DeletedAt == nil
 }

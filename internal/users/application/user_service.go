@@ -1,169 +1,127 @@
 package application
 
 import (
-	"errors"
-	"finanzas-api/internal/users/domain"
-	"finanzas-api/shared/security"
+	"context"
 	"strings"
+
+	"finanzas-api/internal/users/domain"
+	"finanzas-api/internal/users/port/in"
+	"finanzas-api/internal/users/port/out"
 
 	"github.com/google/uuid"
 )
 
 type userService struct {
-	userRepo domain.UserRepository
+	repo   out.UserRepository
+	hasher out.PasswordHasher
 }
 
-func NewUserUseCase(UserRepo domain.UserRepository) domain.UserUseCase {
-	return &userService{
-		userRepo: UserRepo,
-	}
+// NewUserService construye el puerto de entrada in.UserService. Depende
+// solo de puertos de salida: ni gin ni gorm ni bcrypt aparecen aquí.
+func NewUserService(repo out.UserRepository, hasher out.PasswordHasher) in.UserService {
+	return &userService{repo: repo, hasher: hasher}
 }
 
-// TODO: Se debe ajustar el crear usuario para que al crear usuario valide bearear token una vez que se implemente la validacion de correos
-func (uc *userService) CreateUser(user *domain.User) error {
-	// Validar datos del usuario
-	if err := uc.ValidateUserData(user); err != nil {
-		return err
-	}
-
-	// Verificar si el email ya existe
-	exists, err := uc.userRepo.EmailExists(user.Email)
+// TODO: se debe ajustar el crear usuario para que valide bearer token una
+// vez que se implemente la validación de correos (internal/verification).
+func (s *userService) Create(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error) {
+	// Validar y normalizar antes de tocar el repositorio o el hasher.
+	user, err := domain.NewUser(cmd.Email, cmd.FirstName, cmd.LastName, "", cmd.Role)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	exists, err := s.repo.ExistsByEmail(ctx, user.Email)
+	if err != nil {
+		return nil, err
 	}
 	if exists {
-		return errors.New("email already exists")
+		return nil, domain.ErrEmailTaken
 	}
 
-	hashedPassword, err := security.HashPassword(user.Password)
+	hash, err := s.hasher.Hash(cmd.Password)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	user.Password = hashedPassword
+	user.PasswordHash = hash
 
-	// Crear usuario
-	return uc.userRepo.Create(user)
+	if err := s.repo.Save(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
-func (uc *userService) DeleteUser(id uuid.UUID) error {
+func (s *userService) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	if id == uuid.Nil {
-		return errors.New("invalid user ID")
+		return nil, domain.ErrInvalidUserID
 	}
-
-	// Verificar que el usuario existe
-	_, err := uc.userRepo.GetByID(id)
-	if err != nil {
-		return err
-	}
-
-	return uc.userRepo.Delete(id)
+	return s.repo.FindByID(ctx, id)
 }
 
-func (uc *userService) GetUserByEmail(email string) (*domain.User, error) {
+func (s *userService) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+	email = strings.TrimSpace(email)
 	if email == "" {
-		return nil, errors.New("email is required")
+		return nil, &domain.ValidationError{Fields: map[string]string{"email": "el email es obligatorio"}}
 	}
-
-	return uc.userRepo.GetByEmail(email)
+	return s.repo.FindByEmail(ctx, email)
 }
 
-func (uc *userService) GetUserByID(id uuid.UUID) (*domain.User, error) {
+func (s *userService) Update(ctx context.Context, cmd in.UpdateUserCommand) (*domain.User, error) {
+	if cmd.ID == uuid.Nil {
+		return nil, domain.ErrInvalidUserID
+	}
+
+	user, err := s.repo.FindByID(ctx, cmd.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	previousEmail := user.Email
+	if err := user.ApplyUpdate(cmd.Email, cmd.FirstName, cmd.LastName, cmd.Role, cmd.IsActive); err != nil {
+		return nil, err
+	}
+
+	// Solo se consulta unicidad de email si realmente cambió.
+	if user.Email != previousEmail {
+		exists, err := s.repo.ExistsByEmail(ctx, user.Email)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			return nil, domain.ErrEmailTaken
+		}
+	}
+
+	if err := s.repo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *userService) Delete(ctx context.Context, id uuid.UUID) error {
 	if id == uuid.Nil {
-		return nil, errors.New("invalid user ID")
+		return domain.ErrInvalidUserID
 	}
-
-	return uc.userRepo.GetByID(id)
+	if _, err := s.repo.FindByID(ctx, id); err != nil {
+		return err
+	}
+	return s.repo.Delete(ctx, id)
 }
 
-func (uc *userService) ListUsers(limit int, offset int) ([]*domain.User, error) {
+func (s *userService) List(ctx context.Context, q in.ListUsersQuery) ([]*domain.User, error) {
+	limit, offset := q.Limit, q.Offset
 	if limit < 0 || offset < 0 {
-		return nil, errors.New("limit and offset must be non-negative")
+		return nil, &domain.ValidationError{Fields: map[string]string{"pagination": "limit y offset deben ser no negativos"}}
 	}
 
-	// Valor por defecto para limit
+	// Valor por defecto para limit.
 	if limit == 0 {
 		limit = 10
 	}
-
-	// Máximo 100 usuarios por página
+	// Máximo 100 usuarios por página.
 	if limit > 100 {
 		limit = 100
 	}
-	return uc.userRepo.List(limit, offset)
-}
 
-func (uc *userService) UpdateUser(user *domain.User) error {
-	if user.ID == uuid.Nil {
-		return errors.New("user ID is required")
-	}
-
-	// Validar datos del usuario
-	if err := uc.ValidateUserData(user); err != nil {
-		return err
-	}
-
-	// Verificar que el usuario existe
-	existingUser, err := uc.userRepo.GetByID(user.ID)
-	if err != nil {
-		return err
-	}
-
-	// Si cambió el email, verificar que no exista
-	if existingUser.Email != user.Email {
-		exists, err := uc.userRepo.EmailExists(user.Email)
-		if err != nil {
-			return err
-		}
-		if exists {
-			return errors.New("email already exists")
-		}
-	}
-
-	return uc.userRepo.Update(user)
-}
-
-func (uc *userService) ValidateUserData(user *domain.User) error {
-	if user == nil {
-		return errors.New("user is required")
-	}
-
-	// Validar email
-	if strings.TrimSpace(user.Email) == "" {
-		return errors.New("email is required")
-	}
-
-	user.Email = strings.ToLower(strings.TrimSpace(user.Email))
-
-	// Validación básica de email
-	if !strings.Contains(user.Email, "@") {
-		return errors.New("invalid email format")
-	}
-
-	// Validar nombres
-	if strings.TrimSpace(user.FirstName) == "" {
-		return errors.New("first name is required")
-	}
-
-	if strings.TrimSpace(user.LastName) == "" {
-		return errors.New("last name is required")
-	}
-
-	// Limpiar espacios en nombres
-	user.FirstName = strings.TrimSpace(user.FirstName)
-	user.LastName = strings.TrimSpace(user.LastName)
-
-	// Validar longitud de campos
-	if len(user.Email) > 255 {
-		return errors.New("email too long")
-	}
-
-	if len(user.FirstName) > 100 {
-		return errors.New("first name too long")
-	}
-
-	if len(user.LastName) > 100 {
-		return errors.New("last name too long")
-	}
-
-	return nil
+	return s.repo.List(ctx, limit, offset)
 }
