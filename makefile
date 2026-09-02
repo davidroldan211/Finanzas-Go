@@ -14,7 +14,7 @@ MAIN?=./cmd/finanzas
 
 ## run: Ejecuta la aplicación
 run:
-	go run $(APP_MAIN)
+	go run $(MAIN)
 
 ## build: Compila el binario
 build:
