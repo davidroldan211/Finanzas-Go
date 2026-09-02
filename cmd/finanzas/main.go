@@ -3,17 +3,18 @@ package main
 import (
 	"finanzas-api/config"
 	"finanzas-api/internal/auth"
-	authRoutes "finanzas-api/internal/auth/routes"
+	DataBase "finanzas-api/internal/shared/db"
+	"finanzas-api/internal/shared/security"
 	"finanzas-api/internal/users"
-	userRoutes "finanzas-api/internal/users/routes"
+	userRoutes "finanzas-api/internal/users/adapter/in/http"
 	"finanzas-api/internal/verification"
-	verificationRoutes "finanzas-api/internal/verification/routes"
-	DataBase "finanzas-api/shared/db"
+	verificationRoutes "finanzas-api/internal/verification/adapter/in/http"
 	"fmt"
 	"log"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -27,24 +28,29 @@ func main() {
 		panic(fmt.Sprintf("Error loading configuration: %v", err))
 	}
 
-	r = gin.Default()
-
+	// El modo de Gin se fija ANTES de gin.Default(): si se fija después, el
+	// logger/recovery ya se construyeron en modo debug.
 	switch config.App.Environment {
 	case "development":
 		gin.SetMode(gin.DebugMode)
 		log.Println("⚙️ Running in development mode")
-		// r.SetTrustedProxies(nil)
 	case "production":
 		gin.SetMode(gin.ReleaseMode)
 		log.Println("💯 Running in production mode")
-		r.SetTrustedProxies([]string{"192.168.1.100"}) // Ejemplo de IP confiable
 	case "test":
 		gin.SetMode(gin.TestMode)
 		log.Println("🛠️ Running in test mode")
-		r.SetTrustedProxies(nil)
 	default:
 		gin.SetMode(gin.DebugMode)
 		log.Println("Running in default (development) mode")
+	}
+
+	r = gin.Default()
+
+	switch config.App.Environment {
+	case "production":
+		r.SetTrustedProxies([]string{"192.168.1.100"}) // Ejemplo de IP confiable
+	default:
 		r.SetTrustedProxies(nil)
 	}
 
@@ -54,12 +60,15 @@ func main() {
 
 	}
 
-	userModule := users.NewUsersModule(db)
-	authModule := auth.NewAuthModule(db, config)
+	hasher := security.NewBcryptHasher(bcrypt.DefaultCost)
+	tokens := security.NewHMACTokenProvider(config.JWT.Secret, config.JWT.Expires)
+
+	userModule := users.NewModule(db, hasher)
+	authModule := auth.NewModule(db, hasher, tokens)
 	verifyModule := verification.NewVerificationModule(db)
 
-	authRoutes.SetupAuthRoutes(r, authModule.Handler)
-	userRoutes.SetupUserRoutes(r, userModule.Handler, authModule.Middleware.Handler)
+	authModule.RegisterRoutes(r)
+	userRoutes.SetupUserRoutes(r, userModule.Handler, authModule.Guard())
 	verificationRoutes.SetupVerificationRoutes(r, verifyModule.Handler)
 
 	log.Println("🚀 Servidor iniciado en " + config.Server.Host + ":" + strconv.Itoa(config.Server.Port))

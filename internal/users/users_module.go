@@ -1,32 +1,31 @@
 package users
 
 import (
-	"finanzas-api/internal/users/domain"
-	"finanzas-api/internal/users/handler"
-	"finanzas-api/internal/users/repository"
-	"finanzas-api/internal/users/usecase"
+	userhttp "finanzas-api/internal/users/adapter/in/http"
+	"finanzas-api/internal/users/adapter/out/postgres"
+	"finanzas-api/internal/users/application"
+	"finanzas-api/internal/users/port/in"
+	"finanzas-api/internal/users/port/out"
 
 	"gorm.io/gorm"
 )
 
-type UsersModule struct {
-	Handler    *handler.UserHandler
-	UseCase    domain.UserUseCase
-	repository domain.UserRepository
+// Module es el composition root del módulo users: arma el adaptador de
+// salida, la aplicación y el adaptador de entrada.
+type Module struct {
+	Service in.UserService
+	Handler *userhttp.UserHandler
 }
 
-func NewUsersModule(db *gorm.DB) *UsersModule {
-	var userRepo domain.UserRepository
-	var userUseCase domain.UserUseCase
-	var userHandler *handler.UserHandler
+// NewModule construye el módulo. hasher es un puerto de salida
+// compartido (satisfecho hoy por *security.BcryptHasher desde main).
+func NewModule(db *gorm.DB, hasher out.PasswordHasher) *Module {
+	repo := postgres.NewUserPostgresRepository(db)
+	svc := application.NewUserService(repo, hasher)
+	handler := userhttp.NewUserHandler(svc)
 
-	userRepo = repository.NewUserPostgresRepository(db)
-	userUseCase = usecase.NewUserUseCase(userRepo)
-	userHandler = handler.NewUserHandler(userUseCase)
-
-	return &UsersModule{
-		Handler:    userHandler,
-		UseCase:    userUseCase,
-		repository: userRepo,
+	return &Module{
+		Service: svc,
+		Handler: handler,
 	}
 }

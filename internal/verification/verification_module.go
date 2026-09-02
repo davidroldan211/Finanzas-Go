@@ -1,27 +1,27 @@
 package verification
 
 import (
-	"finanzas-api/internal/verification/domain"
-	"finanzas-api/internal/verification/handler"
-	"finanzas-api/internal/verification/repository"
-	"finanzas-api/internal/verification/usecase"
+	verificationhttp "finanzas-api/internal/verification/adapter/in/http"
+	"finanzas-api/internal/verification/adapter/out/postgres"
+	"finanzas-api/internal/verification/application"
+	"finanzas-api/internal/verification/port/in"
 
 	"gorm.io/gorm"
 )
 
-type verificationModule struct {
-	Handler    *handler.VerificationHandler
-	UseCase    domain.VerificationUseCase
-	repository domain.VerificationRepository
+// Module es el composition root del módulo verification.
+type Module struct {
+	Service in.VerificationService
+	Handler *verificationhttp.VerificationHandler
 }
 
-func NewVerificationModule(db *gorm.DB) *verificationModule {
-	repo := repository.NewVerificationPostgresRepository(db)
-	uc := usecase.NewVerificationUseCase(repo)
-	h := handler.NewVerificationHandler(uc)
-	return &verificationModule{
-		Handler:    h,
-		UseCase:    uc,
-		repository: repo,
+func NewVerificationModule(db *gorm.DB) *Module {
+	repo := postgres.NewVerificationPostgresRepository(db)
+	svc := application.NewVerificationService(repo)
+	handler := verificationhttp.NewVerificationHandler(svc)
+
+	return &Module{
+		Service: svc,
+		Handler: handler,
 	}
 }

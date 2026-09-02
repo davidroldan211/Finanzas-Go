@@ -1,12 +1,12 @@
 # 🏦 Finanzas Personales
 
-Sistema backend para la gestión de finanzas personales, desarrollado en Go con una arquitectura limpia, modular y escalable, orientado a entornos empresariales.
+Sistema backend para la gestión de finanzas personales, desarrollado en Go con una arquitectura hexagonal, modular y escalable, orientado a entornos empresariales.
 
 ---
 
 ## 📁 Estructura del Proyecto
 
-El proyecto esta construido siguiendo los lineamientos de [Clean Architecture ](docs/ClearAchitecture.md)
+El proyecto esta construido siguiendo los lineamientos de [Arquitectura Hexagonal (Puertos y Adaptadores)](docs/HexagonalArchitecture.md)
 
 ## ⚙️ Requisitos
 
@@ -80,7 +80,7 @@ make coverage  # Valida cobertura de pruebas
 ```
 ## 📦 Tecnologías Utilizadas
 - Go (Golang)
-- Clean Architecture
+- Arquitectura Hexagonal (Puertos y Adaptadores)
 - Docker / Docker Compose
 - PostgreSQL
 - (Opcional) Gin / Echo / Fiber como framework web
@@ -90,7 +90,7 @@ make coverage  # Valida cobertura de pruebas
 ## 🛠 Buenas Prácticas Aplicadas
 - Estructura basada en cmd/ para binarios
 - internal/ para encapsular lógica de negocio
-- Separación por capas: dominio, casos de uso, repositorio, handlers
+- Separación por puertos y adaptadores: domain, port, application, adapter
 - Automatización con Makefile
 - Uso de variables de entorno en config/
 
