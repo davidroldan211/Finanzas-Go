@@ -1,7 +1,7 @@
-package handler
+package http
 
 import (
-	"net/http"
+	nethttp "net/http"
 	"strconv"
 
 	"finanzas-api/internal/users/domain"
@@ -56,7 +56,7 @@ type UserResponse struct {
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(nethttp.StatusBadRequest, gin.H{
 			"error":   "Invalid request data",
 			"details": err.Error(),
 		})
@@ -78,13 +78,13 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	}
 
 	if err := h.userUseCase.CreateUser(user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(nethttp.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
+	c.JSON(nethttp.StatusCreated, gin.H{
 		"message": "User created successfully",
 		"user":    h.toUserResponse(user),
 	})
@@ -95,7 +95,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(nethttp.StatusBadRequest, gin.H{
 			"error": "Invalid user ID",
 		})
 		return
@@ -103,13 +103,13 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 
 	user, err := h.userUseCase.GetUserByID(uuid.UUID(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
+		c.JSON(nethttp.StatusNotFound, gin.H{
 			"error": "User not found",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(nethttp.StatusOK, gin.H{
 		"user": h.toUserResponse(user),
 	})
 }
@@ -119,7 +119,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(nethttp.StatusBadRequest, gin.H{
 			"error": "Invalid user ID",
 		})
 		return
@@ -127,7 +127,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	var req UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(nethttp.StatusBadRequest, gin.H{
 			"error":   "Invalid request data",
 			"details": err.Error(),
 		})
@@ -137,7 +137,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	// Obtener usuario existente
 	user, err := h.userUseCase.GetUserByID(uuid.UUID(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
+		c.JSON(nethttp.StatusNotFound, gin.H{
 			"error": "User not found",
 		})
 		return
@@ -161,13 +161,13 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	if err := h.userUseCase.UpdateUser(user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(nethttp.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(nethttp.StatusOK, gin.H{
 		"message": "User updated successfully",
 		"user":    h.toUserResponse(user),
 	})
@@ -178,20 +178,20 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(nethttp.StatusBadRequest, gin.H{
 			"error": "Invalid user ID",
 		})
 		return
 	}
 
 	if err := h.userUseCase.DeleteUser(uuid.UUID(id)); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
+		c.JSON(nethttp.StatusNotFound, gin.H{
 			"error": "User not found",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(nethttp.StatusOK, gin.H{
 		"message": "User deleted successfully",
 	})
 }
@@ -214,7 +214,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 
 	users, err := h.userUseCase.ListUsers(limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(nethttp.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
@@ -226,7 +226,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		userResponses = append(userResponses, h.toUserResponse(user))
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(nethttp.StatusOK, gin.H{
 		"users": userResponses,
 		"pagination": gin.H{
 			"limit":  limit,

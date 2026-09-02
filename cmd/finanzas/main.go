@@ -5,7 +5,7 @@ import (
 	"finanzas-api/internal/auth"
 	authRoutes "finanzas-api/internal/auth/routes"
 	"finanzas-api/internal/users"
-	userRoutes "finanzas-api/internal/users/routes"
+	userRoutes "finanzas-api/internal/users/adapter/in/http"
 	"finanzas-api/internal/verification"
 	verificationRoutes "finanzas-api/internal/verification/routes"
 	DataBase "finanzas-api/shared/db"

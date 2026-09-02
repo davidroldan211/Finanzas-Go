@@ -1,13 +1,11 @@
-package routes
+package http
 
 import (
-	"finanzas-api/internal/users/handler"
-
 	"github.com/gin-gonic/gin"
 )
 
 // SetupUserRoutes configura las rutas para el módulo de usuarios
-func SetupUserRoutes(router *gin.Engine, userHandler *handler.UserHandler, authMiddleware func(...string) gin.HandlerFunc) {
+func SetupUserRoutes(router *gin.Engine, userHandler *UserHandler, authMiddleware func(...string) gin.HandlerFunc) {
 	// Grupo de rutas para usuarios
 	userRoutes := router.Group("/api/v1/users")
 	{

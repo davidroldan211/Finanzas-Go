@@ -6,7 +6,7 @@ import (
 	"finanzas-api/internal/auth/handler"
 	"finanzas-api/internal/auth/usecase"
 	"finanzas-api/internal/middleware"
-	userRepo "finanzas-api/internal/users/repository"
+	userRepo "finanzas-api/internal/users/adapter/out/postgres"
 	"finanzas-api/shared/security"
 
 	"gorm.io/gorm"

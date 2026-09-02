@@ -1,4 +1,4 @@
-package repository
+package postgres
 
 import (
 	"finanzas-api/internal/users/domain"
