@@ -2,70 +2,91 @@ package http
 
 import (
 	"errors"
-	"finanzas-api/internal/shared/security"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"finanzas-api/internal/auth/domain"
+
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
-// Mock: token válido con rol admin
-func mockParseTokenAdmin(token, secret string) (*security.TokenClaims, error) {
-	return &security.TokenClaims{
-		UserID: uuid.MustParse("12345678-1234-1234-1234-123456789012"),
-		Role:   "admin",
-		Exp:    9999999999,
-	}, nil
+type stubTokenProvider struct {
+	verifyFunc func(raw string) (domain.Claims, error)
 }
 
-// Mock: token válido con rol user
-func mockParseTokenUser(token, secret string) (*security.TokenClaims, error) {
-	return &security.TokenClaims{
-		UserID: uuid.MustParse("12345678-1234-1234-1234-123456789012"),
-		Role:   "user",
-		Exp:    9999999999,
-	}, nil
+func (s *stubTokenProvider) Issue(claims domain.Claims) (domain.Token, error) {
+	return domain.Token{}, nil
 }
 
-// Mock: token inválido
-func mockParseTokenInvalid(token, secret string) (*security.TokenClaims, error) {
-	return nil, errors.New("invalid token")
+func (s *stubTokenProvider) Verify(raw string) (domain.Claims, error) {
+	return s.verifyFunc(raw)
 }
 
-// Mock: token expirado
-func mockParseTokenExpired(token, secret string) (*security.TokenClaims, error) {
-	return nil, errors.New("token expired")
+func adminTokenProvider() *stubTokenProvider {
+	return &stubTokenProvider{verifyFunc: func(raw string) (domain.Claims, error) {
+		return domain.Claims{Subject: "12345678-1234-1234-1234-123456789012", Role: "admin"}, nil
+	}}
 }
 
-func TestMiddleware_Unauthorized(t *testing.T) {
+func userTokenProvider() *stubTokenProvider {
+	return &stubTokenProvider{verifyFunc: func(raw string) (domain.Claims, error) {
+		return domain.Claims{Subject: "12345678-1234-1234-1234-123456789012", Role: "user"}, nil
+	}}
+}
+
+func invalidTokenProvider() *stubTokenProvider {
+	return &stubTokenProvider{verifyFunc: func(raw string) (domain.Claims, error) {
+		return domain.Claims{}, errors.New("invalid token")
+	}}
+}
+
+func expiredTokenProvider() *stubTokenProvider {
+	return &stubTokenProvider{verifyFunc: func(raw string) (domain.Claims, error) {
+		return domain.Claims{}, domain.ErrInvalidToken
+	}}
+}
+
+func newProtectedRouter(g *Guard, roles ...string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
-
 	r := gin.New()
-	m := NewMiddleware("test-secret", mockParseTokenInvalid)
-	r.GET("/protected", m.Handler("admin"), func(c *gin.Context) {
+	r.GET("/protected", g.Handler(roles...), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 	})
+	return r
+}
+
+func TestGuard_Unauthorized_InvalidToken(t *testing.T) {
+	g := NewGuard(invalidTokenProvider())
+	r := newProtectedRouter(g, "admin")
 
 	req := httptest.NewRequest("GET", "/protected", nil)
 	req.Header.Set("Authorization", "Bearer invalidtoken")
 	w := httptest.NewRecorder()
-
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.Contains(t, w.Body.String(), "unauthorized")
 }
 
-func TestMiddleware_Forbidden(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	r := gin.New()
-	m := NewMiddleware("test-secret", mockParseTokenUser)
-	r.GET("/protected", m.Handler("admin"), func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "ok"})
-	})
+func TestGuard_Unauthorized_ExpiredToken(t *testing.T) {
+	g := NewGuard(expiredTokenProvider())
+	r := newProtectedRouter(g, "admin")
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	req.Header.Set("Authorization", "Bearer expiredtoken")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Contains(t, w.Body.String(), "unauthorized")
+}
+
+func TestGuard_Forbidden_WrongRole(t *testing.T) {
+	g := NewGuard(userTokenProvider())
+	r := newProtectedRouter(g, "admin")
+
 	req := httptest.NewRequest("GET", "/protected", nil)
 	req.Header.Set("Authorization", "Bearer validtoken")
 	w := httptest.NewRecorder()
@@ -75,40 +96,65 @@ func TestMiddleware_Forbidden(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "forbidden")
 }
 
-func TestMiddleware_Success(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	r := gin.New()
-	m := NewMiddleware("test-secret", mockParseTokenAdmin)
-	r.GET("/protected", m.Handler("admin"), func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "ok"})
-	})
+func TestGuard_Success(t *testing.T) {
+	g := NewGuard(adminTokenProvider())
+	r := newProtectedRouter(g, "admin")
 
 	req := httptest.NewRequest("GET", "/protected", nil)
 	req.Header.Set("Authorization", "Bearer validtoken")
 	w := httptest.NewRecorder()
-
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "ok")
 }
 
-func TestMiddleware_SuccessWithExtraSpaces(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	r := gin.New()
-	m := NewMiddleware("test-secret", mockParseTokenAdmin)
-	r.GET("/protected", m.Handler("admin"), func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "ok"})
-	})
+func TestGuard_SuccessWithExtraSpaces(t *testing.T) {
+	g := NewGuard(adminTokenProvider())
+	r := newProtectedRouter(g, "admin")
 
 	req := httptest.NewRequest("GET", "/protected", nil)
 	req.Header.Set("Authorization", "  Bearer    validtoken   ")
 	w := httptest.NewRecorder()
-
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "ok")
+}
+
+func TestGuard_Unauthorized_NoHeader(t *testing.T) {
+	g := NewGuard(adminTokenProvider())
+	r := newProtectedRouter(g, "admin")
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGuard_Unauthorized_HeaderWithoutBearer_InvalidToken(t *testing.T) {
+	g := NewGuard(invalidTokenProvider())
+	r := newProtectedRouter(g, "admin")
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	req.Header.Set("Authorization", "not-a-real-token")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// Sin el prefijo "Bearer", el header completo se trata como token y
+	// pasa a Verify tal cual; con un token inválido, Verify lo rechaza -> 401.
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGuard_Unauthorized_BearerWithoutToken(t *testing.T) {
+	g := NewGuard(adminTokenProvider())
+	r := newProtectedRouter(g, "admin")
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	req.Header.Set("Authorization", "Bearer")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }

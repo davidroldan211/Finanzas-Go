@@ -2,35 +2,37 @@ package application
 
 import (
 	"context"
-	"errors"
 
-	"finanzas-api/config"
-	"finanzas-api/internal/shared/security"
-	userOut "finanzas-api/internal/users/port/out"
+	"finanzas-api/internal/auth/domain"
+	"finanzas-api/internal/auth/port/in"
+	"finanzas-api/internal/auth/port/out"
 )
 
-// NOTA: auth reutiliza aquí el puerto de salida de users (userOut.UserRepository)
-// como solución interina. La fase 2 lo sustituye por un puerto propio de auth
-// (out.UserFinder), read-only y sin acoplar los dos módulos.
-type AuthService struct {
-	userRepo  userOut.UserRepository
-	jwtConfig config.JWTConfig
+type authService struct {
+	users    out.UserFinder
+	verifier out.PasswordVerifier
+	tokens   out.TokenProvider
 }
 
-func NewAuthService(repo userOut.UserRepository, cfg config.JWTConfig) *AuthService {
-	return &AuthService{userRepo: repo, jwtConfig: cfg}
+// NewAuthService construye el puerto de entrada in.AuthService. Depende
+// solo de puertos de salida: ni config ni bcrypt ni el HMAC aparecen aquí.
+func NewAuthService(users out.UserFinder, verifier out.PasswordVerifier, tokens out.TokenProvider) in.AuthService {
+	return &authService{users: users, verifier: verifier, tokens: tokens}
 }
 
-func (uc *AuthService) Login(email, password string) (string, error) {
-	user, err := uc.userRepo.FindByEmail(context.Background(), email)
+func (s *authService) Login(ctx context.Context, cmd in.LoginCommand) (domain.Token, error) {
+	creds, err := s.users.FindByEmail(ctx, cmd.Email)
 	if err != nil {
-		return "", errors.New("invalid credentials")
+		// Email desconocido y password incorrecta devuelven el mismo
+		// error, indistinguible: defensa contra enumeración de usuarios.
+		return domain.Token{}, domain.ErrInvalidCredentials
 	}
-	if !security.CheckPasswordHash(password, user.PasswordHash) {
-		return "", errors.New("invalid credentials")
+	if !s.verifier.Matches(cmd.Password, creds.PasswordHash) {
+		return domain.Token{}, domain.ErrInvalidCredentials
 	}
-	if !user.IsValidForAuth() {
-		return "", errors.New("user inactive")
+	if !creds.Active {
+		return domain.Token{}, domain.ErrUserInactive
 	}
-	return security.GenerateToken(user.ID, user.Role, uc.jwtConfig.Secret, uc.jwtConfig.Expires)
+
+	return s.tokens.Issue(domain.Claims{Subject: creds.UserID, Role: creds.Role})
 }

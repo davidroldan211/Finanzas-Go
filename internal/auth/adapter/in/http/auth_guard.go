@@ -1,52 +1,51 @@
 package http
 
 import (
-	"log"
-	nethttp "net/http"
 	"strings"
 
-	"finanzas-api/internal/shared/security"
+	"finanzas-api/internal/auth/port/out"
+	"finanzas-api/internal/httpx"
 
 	"github.com/gin-gonic/gin"
 )
 
-type Middleware struct {
-	Secret     string
-	ParseToken ParseTokenFunc
+// Guard es el adaptador de entrada que autentica y autoriza por rol.
+// Autenticar/autorizar es el caso de uso de auth: solo cambia el adaptador
+// que lo dispara (cabecera HTTP en vez de body de login), por eso vive
+// aquí y no en un paquete "middleware" neutral.
+type Guard struct {
+	tokens out.TokenProvider
 }
 
-type ParseTokenFunc func(token, secret string) (*security.TokenClaims, error)
-
-func NewMiddleware(secret string, parseToken ParseTokenFunc) *Middleware {
-	return &Middleware{
-		Secret:     secret,
-		ParseToken: parseToken,
-	}
+func NewGuard(tokens out.TokenProvider) *Guard {
+	return &Guard{tokens: tokens}
 }
 
-func (m *Middleware) Handler(roles ...string) gin.HandlerFunc {
+// Handler satisface httpx.AuthGuard.
+func (g *Guard) Handler(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
 		if authHeader == "" {
-			c.AbortWithStatusJSON(nethttp.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			httpx.Abort(c, httpx.Unauthorized(""))
 			return
 		}
 
 		fields := strings.Fields(authHeader)
 		if len(fields) > 0 && strings.EqualFold(fields[0], "bearer") {
 			if len(fields) < 2 {
-				c.AbortWithStatusJSON(nethttp.StatusUnauthorized, gin.H{"error": "unauthorized"})
+				httpx.Abort(c, httpx.Unauthorized(""))
 				return
 			}
 			authHeader = fields[1]
 		}
 
 		authHeader = strings.TrimSpace(authHeader)
-		claims, err := m.ParseToken(authHeader, m.Secret)
+		claims, err := g.tokens.Verify(authHeader)
 		if err != nil {
-			c.AbortWithStatusJSON(nethttp.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			httpx.Abort(c, httpx.Unauthorized(""))
 			return
 		}
+
 		if len(roles) > 0 {
 			allowed := false
 			for _, r := range roles {
@@ -56,13 +55,13 @@ func (m *Middleware) Handler(roles ...string) gin.HandlerFunc {
 				}
 			}
 			if !allowed {
-				c.AbortWithStatusJSON(nethttp.StatusForbidden, gin.H{"error": "forbidden"})
+				httpx.Abort(c, httpx.Forbidden(""))
 				return
 			}
 		}
-		c.Set("userID", claims.UserID)
+
+		c.Set("userID", claims.Subject)
 		c.Set("userRole", claims.Role)
-		log.Printf("Authenticated user ID: %d with role: %s", claims.UserID, claims.Role)
 		c.Next()
 	}
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"finanzas-api/config"
 	"finanzas-api/internal/auth"
-	authRoutes "finanzas-api/internal/auth/adapter/in/http"
 	DataBase "finanzas-api/internal/shared/db"
 	"finanzas-api/internal/shared/security"
 	"finanzas-api/internal/users"
@@ -62,13 +61,14 @@ func main() {
 	}
 
 	hasher := security.NewBcryptHasher(bcrypt.DefaultCost)
+	tokens := security.NewHMACTokenProvider(config.JWT.Secret, config.JWT.Expires)
 
 	userModule := users.NewModule(db, hasher)
-	authModule := auth.NewAuthModule(db, config)
+	authModule := auth.NewModule(db, hasher, tokens)
 	verifyModule := verification.NewVerificationModule(db)
 
-	authRoutes.SetupAuthRoutes(r, authModule.Handler)
-	userRoutes.SetupUserRoutes(r, userModule.Handler, authModule.Middleware.Handler)
+	authModule.RegisterRoutes(r)
+	userRoutes.SetupUserRoutes(r, userModule.Handler, authModule.Guard())
 	verificationRoutes.SetupVerificationRoutes(r, verifyModule.Handler)
 
 	log.Println("🚀 Servidor iniciado en " + config.Server.Host + ":" + strconv.Itoa(config.Server.Port))

@@ -1,39 +1,33 @@
 package http
 
 import (
-	"net/http"
+	nethttp "net/http"
 
-	"finanzas-api/internal/auth/domain"
+	"finanzas-api/internal/auth/port/in"
+	"finanzas-api/internal/httpx"
+
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
-	useCase domain.AuthUseCase
+	service in.AuthService
 }
 
-func NewAuthHandler(uc domain.AuthUseCase) *AuthHandler {
-	return &AuthHandler{useCase: uc}
-}
-
-type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-}
-
-type LoginResponse struct {
-	Token string `json:"token"`
+func NewAuthHandler(service in.AuthService) *AuthHandler {
+	return &AuthHandler{service: service}
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
-	token, err := h.useCase.Login(req.Email, req.Password)
+
+	token, err := h.service.Login(c.Request.Context(), in.LoginCommand{Email: req.Email, Password: req.Password})
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		httpx.Abort(c, toAppError(err))
 		return
 	}
-	c.JSON(http.StatusOK, LoginResponse{Token: token})
+
+	c.JSON(nethttp.StatusOK, LoginResponse{Token: token.Value})
 }
