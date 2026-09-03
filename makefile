@@ -6,7 +6,7 @@ ifneq (,$(wildcard .env))
 	export $(shell sed 's/=.*//' .env)
 endif
 
-.PHONY: run build clean test fmt lint arch help
+.PHONY: run build clean test fmt lint arch help coverage migrate-up migrate-down migrate-status migrate-reset migrate-create
 
 APP_NAME?=mi-proyecto
 MAIN?=./cmd/finanzas
@@ -90,4 +90,24 @@ coverage:
 		echo ""; \
 		exit 1 ; \
 	fi
-	
+
+## migrate-up: Aplica las migraciones pendientes
+migrate-up:
+	go run ./cmd/migrate up
+
+## migrate-down: Revierte la última migración
+migrate-down:
+	go run ./cmd/migrate down
+
+## migrate-status: Muestra qué migraciones están aplicadas
+migrate-status:
+	go run ./cmd/migrate status
+
+## migrate-reset: Revierte todas las migraciones
+migrate-reset:
+	go run ./cmd/migrate reset
+
+## migrate-create: Crea una migración nueva (make migrate-create name=add_email_verified)
+migrate-create:
+	go run ./cmd/migrate create $(name)
+

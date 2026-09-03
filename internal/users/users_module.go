@@ -7,6 +7,8 @@ import (
 	"finanzas-api/internal/users/port/in"
 	"finanzas-api/internal/users/port/out"
 
+	"finanzas-api/internal/httpx"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
@@ -28,4 +30,9 @@ func NewModule(db *gorm.DB, hasher out.PasswordHasher) *Module {
 		Service: svc,
 		Handler: handler,
 	}
+}
+
+// RegisterRoutes registra las rutas del módulo users.
+func (m *Module) RegisterRoutes(router *gin.Engine, authGuard httpx.AuthGuard) {
+	userhttp.SetupUserRoutes(router, m.Handler, authGuard)
 }

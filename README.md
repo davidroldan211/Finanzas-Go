@@ -33,6 +33,37 @@ docker compose up -d
 ```
 Este comando levantará la infraestructura definida (como PostgreSQL, Redis, etc.).
 
+## 🗃️ Migraciones de base de datos
+
+Las tablas **no** se crean solas (no hay `AutoMigrate`): hay que aplicar las migraciones antes de correr la app por primera vez.
+
+```bash
+make migrate-up
+```
+
+### Cómo funciona
+
+- Los archivos `.sql` viven en `db/migrations/`, numerados en orden (`00001_...`, `00002_...`, ...) y se aplican en ese orden.
+- Cada archivo tiene un bloque `-- +goose Up` (qué crea) y uno `-- +goose Down` (cómo deshacerlo).
+- `cmd/migrate` (usa [goose](https://github.com/pressly/goose)) los aplica contra la base configurada en `.env`. Los `.sql` quedan embebidos en el binario (`db/migrations.go`), así que no dependen de encontrar el directorio en disco.
+- Postgres registra qué migraciones ya corrieron, así que `make migrate-up` es seguro de repetir: solo aplica las pendientes.
+
+### Comandos
+
+```bash
+make migrate-up                        # aplica las migraciones pendientes
+make migrate-status                    # muestra cuáles están aplicadas y cuáles no
+make migrate-down                      # revierte la última migración aplicada
+make migrate-reset                     # revierte todas (borra las tablas)
+make migrate-create name=nombre_algo   # crea db/migrations/000NN_nombre_algo.sql
+```
+
+### Regla al agregar un cambio de esquema
+
+1. `make migrate-create name=lo_que_cambia` — crea el archivo con el siguiente número.
+2. Completar `-- +goose Up` con el cambio y `-- +goose Down` con cómo revertirlo.
+3. **Nunca editar una migración que ya se mergeó a `main`.** Si algo quedó mal, se corrige con una migración nueva (número mayor), no editando la vieja — de lo contrario una base ya creada con el archivo original queda con un esquema que el `.sql` ya no describe, y no hay forma de notarlo.
+
 ## ▶️ Ejecución
 Modo local
 ```bash
@@ -77,6 +108,12 @@ make lint      # Revisar calidad del código con go vet
 ```
 ```bash 
 make coverage  # Valida cobertura de pruebas 
+```
+```bash
+make migrate-up      # Aplicar migraciones pendientes
+```
+```bash
+make migrate-status  # Ver estado de las migraciones
 ```
 ## 📦 Tecnologías Utilizadas
 - Go (Golang)
