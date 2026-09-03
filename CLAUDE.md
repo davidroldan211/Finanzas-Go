@@ -5,18 +5,29 @@ Este archivo da guía a Claude Code (claude.ai/code) al trabajar con código en 
 ## Comandos
 
 ```bash
-make run       # go run ./cmd/finanzas
-make build     # compila binario a bin/
-make test      # go test ./...
-make lint      # go vet ./... + make arch
-make arch      # verifica que domain/application/port no importen gin/gorm/config/httpx
-make fmt       # go fmt ./...
-make coverage  # test + reporte de cobertura, falla si total < 5%
+make run             # go run ./cmd/finanzas
+make build           # compila binario a bin/
+make test            # go test ./...
+make lint            # go vet ./... + make arch
+make arch            # verifica que domain/application/port no importen gin/gorm/config/httpx
+make fmt             # go fmt ./...
+make coverage        # test + reporte de cobertura, falla si total < 5%
+make migrate-up      # aplica las migraciones pendientes
+make migrate-down    # revierte la última migración
+make migrate-status  # muestra qué migraciones están aplicadas
+make migrate-reset   # revierte todas las migraciones
+make migrate-create name=<algo>  # crea db/migrations/000NN_<algo>.sql
 ```
 
 Test individual: `go test ./internal/users/application/... -run TestName -v`
 
-Requiere Docker (`docker compose up -d`) para Postgres, y archivo `.env` (ver `.env.template`) — `config.LoadConfig()` llama `godotenv.Load()` y hace `log.Fatal` si falta `.env`. Las migraciones en `db/migrations/*.sql` se aplican a mano (no hay `AutoMigrate` ni herramienta de migración).
+Requiere Docker (`docker compose up -d`) para Postgres, y archivo `.env` (ver `.env.template`) — `config.LoadConfig()` llama `godotenv.Load()` y hace `log.Fatal` si falta `.env`.
+
+### Migraciones
+
+Las migraciones viven en `db/migrations/*.sql`, numeradas secuencialmente (`00001_...`, `00002_...`) y se aplican con `goose` (`github.com/pressly/goose/v3`) a través de `cmd/migrate` — no hay `AutoMigrate`, los structs GORM (`userModel`, `verificationModel`, ...) no son la fuente de verdad del esquema, las migraciones sí. `db/migrations.go` las embebe (`//go:embed migrations/*.sql`) para que el binario no dependa del disco.
+
+**Regla dura: una migración ya mergeada a `main` no se edita nunca.** Un cambio de esquema posterior siempre es un archivo nuevo con número mayor (`make migrate-create name=algo`), con su bloque `-- +goose Down` para poder revertirlo. Editar una migración vieja deja bases ya creadas con un esquema que el archivo ya no describe, sin forma de detectarlo.
 
 ## Arquitectura
 

@@ -6,9 +6,7 @@ import (
 	DataBase "finanzas-api/internal/shared/db"
 	"finanzas-api/internal/shared/security"
 	"finanzas-api/internal/users"
-	userRoutes "finanzas-api/internal/users/adapter/in/http"
 	"finanzas-api/internal/verification"
-	verificationRoutes "finanzas-api/internal/verification/adapter/in/http"
 	"fmt"
 	"log"
 	"strconv"
@@ -47,10 +45,9 @@ func main() {
 
 	r = gin.Default()
 
-	switch config.App.Environment {
-	case "production":
-		r.SetTrustedProxies([]string{"192.168.1.100"}) // Ejemplo de IP confiable
-	default:
+	if config.App.Environment == "production" {
+		r.SetTrustedProxies(config.Server.TrustedProxies)
+	} else {
 		r.SetTrustedProxies(nil)
 	}
 
@@ -68,8 +65,8 @@ func main() {
 	verifyModule := verification.NewVerificationModule(db)
 
 	authModule.RegisterRoutes(r)
-	userRoutes.SetupUserRoutes(r, userModule.Handler, authModule.Guard())
-	verificationRoutes.SetupVerificationRoutes(r, verifyModule.Handler)
+	userModule.RegisterRoutes(r, authModule.Guard())
+	verifyModule.RegisterRoutes(r)
 
 	log.Println("🚀 Servidor iniciado en " + config.Server.Host + ":" + strconv.Itoa(config.Server.Port))
 	r.Run(config.Server.Host + ":" + strconv.Itoa(config.Server.Port))

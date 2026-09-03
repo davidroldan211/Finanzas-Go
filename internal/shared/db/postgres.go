@@ -11,7 +11,10 @@ import (
 
 func NewPostgresDB(cfg *config.Config) (*gorm.DB, error) {
 	dsn := cfg.GetDatabaseURL()
-	fmt.Println("Conectando a la base de datos PostgreSQL con la URL:", dsn)
+
+	if cfg.IsDevelopment() {
+		fmt.Println("Conectando a la base de datos PostgreSQL con la URL: \n", dsn)
+	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

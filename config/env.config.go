@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -32,8 +33,9 @@ type JWTConfig struct {
 }
 
 type ServerConfig struct {
-	Host string `validate:"required"`
-	Port int    `validate:"required"`
+	Host           string `validate:"required"`
+	Port           int    `validate:"required"`
+	TrustedProxies []string
 }
 
 type AppConfig struct {
@@ -51,7 +53,7 @@ func LoadConfig() (*Config, error) {
 	jwtExpiresIn, err := time.ParseDuration(getEnv("JWT_EXPIRES_IN", "24h"))
 
 	if err != nil {
-		jwtExpiresIn = 24 * time.Hour // Default to 24 hours if parsing fails
+		jwtExpiresIn = 24 * time.Hour // 24h por defecto si no se puede parsear
 	}
 
 	Config := &Config{
@@ -68,8 +70,9 @@ func LoadConfig() (*Config, error) {
 			Expires: jwtExpiresIn,
 		},
 		Server: ServerConfig{
-			Host: getEnv("SERVER_HOST", "localhost"),
-			Port: getEnvAsInt("SERVER_PORT", 8080),
+			Host:           getEnv("SERVER_HOST", "localhost"),
+			Port:           getEnvAsInt("SERVER_PORT", 8080),
+			TrustedProxies: getEnvAsList("TRUSTED_PROXIES"),
 		},
 		App: AppConfig{
 			Environment: getEnv("APP_ENV", "development"),
@@ -111,4 +114,19 @@ func getEnvAsInt(key string, defaultValue int) int {
 		}
 	}
 	return defaultValue
+}
+
+func getEnvAsList(key string) []string {
+	value := os.Getenv(key)
+	if value == "" {
+		return nil
+	}
+
+	var items []string
+	for _, item := range strings.Split(value, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
 }

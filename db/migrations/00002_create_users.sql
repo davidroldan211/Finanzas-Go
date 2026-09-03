@@ -1,6 +1,4 @@
--- activa la extensión para gen_random_uuid si aún no existe
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
+-- +goose Up
 CREATE TABLE users (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email      VARCHAR(255) NOT NULL UNIQUE,
@@ -16,3 +14,6 @@ CREATE TABLE users (
 
 -- índice para consultas por la columna de soft delete, igual que gorm:"index"
 CREATE INDEX idx_users_deleted_at ON users (deleted_at);
+
+-- +goose Down
+DROP TABLE IF EXISTS users;

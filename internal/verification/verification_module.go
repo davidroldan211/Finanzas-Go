@@ -6,6 +6,7 @@ import (
 	"finanzas-api/internal/verification/application"
 	"finanzas-api/internal/verification/port/in"
 
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
@@ -24,4 +25,9 @@ func NewVerificationModule(db *gorm.DB) *Module {
 		Service: svc,
 		Handler: handler,
 	}
+}
+
+// RegisterRoutes registra las rutas del módulo verification.
+func (m *Module) RegisterRoutes(router *gin.Engine) {
+	verificationhttp.SetupVerificationRoutes(router, m.Handler)
 }
