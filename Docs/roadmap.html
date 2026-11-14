@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roadmap Finanzas-Go</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout: libro mayor. Fases como asientos numerados; cada fase cierra con un punto de control de seguridad en franja ámbar. */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --ink: #152030;
+  --muted: #586579;
+  --line: #d8dee7;
+  --accent: #2747d6;
+  --sec: #a85a06;
+  --sec-bg: #fdf4e7;
+  --ok: #1d7549;
+  --ok-bg: #e7f4ec;
+  --wip-bg: #e9edfc;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131b;
+    --surface: #161d28;
+    --ink: #e5eaf2;
+    --muted: #9aa5b7;
+    --line: #283242;
+    --accent: #8098ff;
+    --sec: #f0a64e;
+    --sec-bg: #2a2015;
+    --ok: #62c693;
+    --ok-bg: #15281f;
+    --wip-bg: #1c2440;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131b;
+  --surface: #161d28;
+  --ink: #e5eaf2;
+  --muted: #9aa5b7;
+  --line: #283242;
+  --accent: #8098ff;
+  --sec: #f0a64e;
+  --sec-bg: #2a2015;
+  --ok: #62c693;
+  --ok-bg: #15281f;
+  --wip-bg: #1c2440;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.55;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+header { padding: 48px 0 28px; border-bottom: 1px solid var(--line); }
+.eyebrow { font-family: var(--font-mono); font-size: 13px; color: var(--muted); letter-spacing: .04em; }
+header h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 800; margin: 8px 0 12px; }
+header p { max-width: 68ch; color: var(--muted); margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 20px; font-size: 14px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+.pill { display: inline-block; font-family: var(--font-mono); font-size: 12px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.done { background: var(--ok-bg); color: var(--ok); }
+.pill.wip { background: var(--wip-bg); color: var(--accent); }
+.pill.todo { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.pill.sec { background: var(--sec-bg); color: var(--sec); }
+
+.tag { display: inline-block; font-family: var(--font-mono); font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); vertical-align: 2px; margin-left: 6px; }
+
+section { padding: 36px 0; border-bottom: 1px solid var(--line); }
+section > .wrap > h2 { font-size: 24px; margin-bottom: 6px; }
+.lead { color: var(--muted); max-width: 68ch; margin: 0 0 22px; }
+
+/* Índice de fases */
+.index { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.index a { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; text-decoration: none; color: var(--ink); }
+.index a:hover { border-color: var(--accent); }
+.index .code { font-family: var(--font-mono); font-size: 13px; color: var(--accent); }
+.index .pill { align-self: flex-start; }
+.index .name { font-family: var(--font-display); font-weight: 700; font-size: 15px; line-height: 1.25; }
+
+/* Punto de partida */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+.box h3 { font-size: 16px; margin-bottom: 10px; display: flex; gap: 8px; align-items: center; }
+.box ul { margin: 0; padding-left: 20px; }
+.box li { margin: 4px 0; }
+
+/* Ciclo IA */
+.cycle { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0; counter-reset: c; overflow-x: auto; }
+.cycle div { position: relative; padding: 14px 12px 12px; background: var(--surface); border: 1px solid var(--line); border-right: 0; font-size: 14px; min-width: 120px; }
+.cycle div:first-child { border-radius: 10px 0 0 10px; }
+.cycle div:last-child { border-right: 1px solid var(--line); border-radius: 0 10px 10px 0; }
+.cycle b { display: block; font-family: var(--font-display); font-size: 15px; margin-bottom: 2px; }
+.cycle .n { font-family: var(--font-mono); font-size: 12px; color: var(--accent); }
+.cycle .human { background: var(--wip-bg); }
+.cycle-note { font-size: 14px; color: var(--muted); margin-top: 10px; }
+
+/* Fase */
+.phase-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px; margin-bottom: 6px; }
+.phase-head .code { font-family: var(--font-mono); font-size: 15px; color: var(--accent); }
+.phase-head h2 { font-size: 26px; }
+.phase-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 4px; padding: 11px 16px 11px 8px; border-top: 1px solid var(--line); }
+.steps li:first-child { border-top: 0; }
+.steps li::before { content: counter(s, decimal-leading-zero); font-family: var(--font-mono); font-size: 13px; color: var(--muted); text-align: right; padding-right: 10px; padding-top: 2px; }
+.steps li.is-wip::before { color: var(--accent); }
+.steps li.is-done::before { color: var(--ok); content: "✓"; }
+.gate li.is-done { color: var(--muted); }
+.gate li.is-done::marker { content: "✓  "; color: var(--ok); }
+.steps .sub { display: block; font-size: 15px; color: var(--muted); }
+.side { display: flex; flex-direction: column; gap: 14px; }
+.exit { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.exit h3, .gate h3 { font-size: 14px; font-family: var(--font-mono); font-weight: 500; letter-spacing: .03em; margin-bottom: 8px; }
+.exit h3 { color: var(--ok); }
+.exit p { margin: 0; font-size: 16px; }
+.gate { background: var(--sec-bg); border-left: 4px solid var(--sec); border-radius: 0 10px 10px 0; padding: 16px 18px; }
+.gate h3 { color: var(--sec); }
+.gate ul { margin: 0; padding-left: 18px; font-size: 15.5px; }
+.gate li { margin: 5px 0; }
+.diag { margin: 0 0 18px; background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; padding: 14px 18px; }
+.diag h3 { font-size: 14px; font-family: var(--font-mono); font-weight: 500; color: var(--muted); margin-bottom: 6px; }
+.diag ul { margin: 0; padding-left: 20px; font-size: 15.5px; }
+
+/* Cierre */
+.ritual { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.ritual .box p { margin: 0; font-size: 15.5px; color: var(--muted); }
+footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
+
+@media (max-width: 820px) {
+  .phase-grid, .split { grid-template-columns: 1fr; }
+  .cycle { grid-template-columns: repeat(8, minmax(120px, 1fr)); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">FINANZAS-GO · ROADMAP DE PRODUCTO · NOV 2026</div>
+    <h1>De API de usuarios a app de finanzas personales</h1>
+    <p>Diez fases en orden de ejecución. Las tres primeras ordenan la forma de trabajar (visión, specs con IA, DevOps) antes de seguir agregando funcionalidad. Cada fase termina con un punto de control de seguridad que se debe aprobar antes de pasar a la siguiente. Este documento dice qué hacer y en qué orden; el cómo se decide en la spec de cada paso.</p>
+    <div class="legend">
+      <span><span class="pill done">hecho</span></span>
+      <span><span class="pill wip">en curso</span></span>
+      <span><span class="pill todo">pendiente</span></span>
+      <span><span class="pill sec">SEC</span> punto de control de seguridad</span>
+      <span><span class="tag">IA</span><span class="tag">DevOps</span><span class="tag">Producto</span> área del paso</span>
+    </div>
+  </div>
+</header>
+
+<section id="indice">
+  <div class="wrap">
+    <h2>Fases</h2>
+    <p class="lead">F0 a F2 son fundamentos y pueden avanzar en paralelo. El MVP público queda listo al cerrar F6.</p>
+    <nav class="index" aria-label="Índice de fases">
+      <a href="#partida"><span class="code">—</span><span class="name">Punto de partida</span><span class="pill done">hecho</span></a>
+      <a href="#f0"><span class="code">F0 · SEC-0</span><span class="name">Visión y alcance</span><span class="pill wip">en revisión</span></a>
+      <a href="#f1"><span class="code">F1 · SEC-1</span><span class="name">Flujo de trabajo con IA</span><span class="pill todo">pendiente</span></a>
+      <a href="#f2"><span class="code">F2 · SEC-2</span><span class="name">Flujo de trabajo y DevOps</span><span class="pill wip">en curso</span></a>
+      <a href="#f3"><span class="code">F3 · SEC-3</span><span class="name">Identidad completa</span><span class="pill wip">en curso</span></a>
+      <a href="#f4"><span class="code">F4 · SEC-4</span><span class="name">Núcleo financiero</span><span class="pill todo">pendiente</span></a>
+      <a href="#f5"><span class="code">F5 · SEC-5</span><span class="name">Cliente y experiencia</span><span class="pill todo">pendiente</span></a>
+      <a href="#f6"><span class="code">F6 · SEC-6</span><span class="name">Lanzamiento del MVP</span><span class="pill todo">pendiente</span></a>
+      <a href="#f7"><span class="code">F7 · SEC-7</span><span class="name">Planeación financiera</span><span class="pill todo">pendiente</span></a>
+      <a href="#f8"><span class="code">F8 · SEC-8</span><span class="name">Análisis e importación</span><span class="pill todo">pendiente</span></a>
+      <a href="#f9"><span class="code">F9 · SEC-9</span><span class="name">Evolución</span><span class="pill todo">pendiente</span></a>
+    </nav>
+  </div>
+</section>
+
+<section id="partida">
+  <div class="wrap">
+    <h2>Punto de partida</h2>
+    <p class="lead">Estado del repositorio al iniciar este roadmap.</p>
+    <div class="split">
+      <div class="box">
+        <h3><span class="pill done">hecho</span> Lo que ya existe</h3>
+        <ul>
+          <li>API con login, usuarios y control por roles</li>
+          <li>Arquitectura hexagonal con verificación automática de fronteras</li>
+          <li>Migraciones de base de datos versionadas y reversibles</li>
+          <li>Pipeline que compila, prueba y valida migraciones</li>
+          <li>Pruebas en auth, usuarios y seguridad compartida</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3><span class="pill sec">brechas</span> Lo que falta o está a medias</h3>
+        <ul>
+          <li>Verificación de email: estructura creada, lógica vacía</li>
+          <li>Creación de usuarios abierta sin protección</li>
+          <li>Pipeline con controles que no bloquean</li>
+          <li>Sin especificaciones ni historias de usuario</li>
+          <li>Ninguna funcionalidad financiera todavía</li>
+          <li>Sin ambientes ni despliegue</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- F0 -->
+<section id="f0">
+  <div class="wrap">
+    <div class="phase-head"><span class="code">F0</span><h2>Visión y alcance</h2><span class="pill wip">en revisión</span></div>
+    <p class="lead">Tener claro qué se construye y para quién antes de escribir más código. Todo lo que viene después sale del backlog que produce esta fase.</p>
+    <div class="phase-grid">
+      <ol class="steps">
+        <li><span>Escribir la visión en una página<span class="tag">Producto</span><span class="sub">Problema que resuelve, a quién, y qué no va a ser.</span></span></li>
+        <li><span>Definir los tipos de usuario<span class="tag">Producto</span><span class="sub">Persona individual, administrador, y si en el futuro habrá hogares o grupos.</span></span></li>
+        <li><span>Listar capacidades candidatas<span class="tag">Producto</span><span class="sub">Cuentas, movimientos, presupuestos, metas, reportes, importación…</span></span></li>
+        <li><span>Priorizar y recortar el MVP<span class="tag">Producto</span><span class="sub">Lo mínimo para que una persona registre su dinero y entienda en qué se va.</span></span></li>
+        <li><span>Crear el glosario del dominio<span class="tag">Producto</span><span class="sub">Cuenta, movimiento, categoría, transferencia, saldo, presupuesto. Un solo significado por término.</span></span></li>
+        <li><span>Armar el mapa de historias del MVP<span class="tag">Producto</span><span class="sub">Recorrido del usuario de izquierda a derecha; historias debajo, por prioridad.</span></span></li>
+      </ol>
+      <div class="side">
+        <div class="exit"><h3>SALE CON</h3><p>Visión, glosario y backlog priorizado con el MVP marcado.</p><p style="margin-top:8px;font-size:15px">Borradores: <a href="producto/vision.md">visión</a> · <a href="producto/alcance.md">alcance</a> · <a href="producto/glosario.md">glosario</a> · <a href="seguridad/sec-0-datos-y-amenazas.md">SEC-0</a></p></div>
+        <div class="gate"><h3>SEC-0 · CLASIFICACIÓN Y AMENAZAS</h3>
+          <ul>
+            <li>Clasificar qué datos manejará la app: personales, financieros, credenciales</li>
+            <li>Identificar la normativa de protección de datos aplicable al país donde operará</li>
+            <li>Primer modelo de amenazas: quién querría estos datos y qué pasa si se filtran</li>
+            <li>Decidir qué datos no se van a pedir nunca</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- F1 -->
+<section id="f1">
+  <div class="wrap">
+    <div class="phase-head"><span class="code">F1</span><h2>Flujo de trabajo con IA</h2><span class="pill todo">pendiente</span></div>
+    <p class="lead">Cada funcionalidad nace como una spec revisable antes de que exista código. La IA ayuda a redactar, planear e implementar; las decisiones y la aprobación son humanas.</p>
+
+    <div class="cycle" role="list" aria-label="Ciclo de una historia">
+      <div role="listitem"><span class="n">1</span><b>Idea</b>Entra al backlog</div>
+      <div role="listitem"><span class="n">2</span><b>Spec</b>Redactada con tus skills</div>
+      <div role="listitem" class="human"><span class="n">3</span><b>Revisión</b>Humana, cumple Listo</div>
+      <div role="listitem"><span class="n">4</span><b>Plan</b>Pasos y archivos</div>
+      <div role="listitem"><span class="n">5</span><b>Implementar</b>Rama propia</div>
+      <div role="listitem" class="human"><span class="n">6</span><b>Revisar PR</b>Código y seguridad</div>
+      <div role="listitem"><span class="n">7</span><b>Merge</b>Pipeline en verde</div>
+      <div role="listitem"><span class="n">8</span><b>Cerrar</b>Spec y contexto al día</div>
+    </div>
+    <p class="cycle-note">Las etapas resaltadas son puertas humanas: la IA no las salta.</p>
+
+    <div class="phase-grid" style="margin-top:22px">
+      <ol class="steps">
+        <li><span>Definir una plantilla única de spec<span class="tag">IA</span><span class="sub">Contexto, historia, criterios de aceptación, fuera de alcance, preguntas abiertas, impacto en seguridad.</span></span></li>
+        <li><span>Definir “Listo” y “Terminado”<span class="tag">IA</span><span class="sub">Cuándo una spec puede implementarse y cuándo una historia se da por cerrada.</span></span></li>
+        <li><span>Alinear tus skills existentes con la plantilla<span class="tag">IA</span><span class="sub">Qué skill se usa en cada etapa del ciclo y qué produce cada una.</span></span></li>
+        <li><span>Decidir dónde viven las specs<span class="tag">IA</span><span class="sub">Y cómo se enlazan con ramas, PRs y commits para tener trazabilidad.</span></span></li>
+        <li><span>Adoptar registros de decisión<span class="tag">IA</span><span class="sub">Una nota corta cada vez que una spec cambia algo estructural.</span></span></li>
+        <li><span>Mantener vivo el contexto que lee la IA<span class="tag">IA</span><span class="sub">Actualizar CLAUDE.md y la documentación al cerrar cada historia.</span></span></li>
+        <li><span>Piloto: correr el ciclo completo con una historia pequeña<span class="tag">IA</span><span class="sub">Candidata: terminar la verificación de email (F3, paso 01). Ajustar la plantilla con lo aprendido.</span></span></li>
+      </ol>
+      <div class="side">
+        <div class="exit"><h3>SALE CON</h3><p>Plantilla, criterios Listo/Terminado, ciclo documentado y una historia piloto cerrada de punta a punta.</p></div>
+        <div class="gate"><h3>SEC-1 · SEGURIDAD EN EL USO DE IA</h3>
+          <ul>
+            <li>Reglas de qué no se comparte con la IA: secretos, datos reales de usuarios</li>
+            <li>Revisión humana obligatoria de todo código generado</li>
+            <li>La sección de seguridad de una spec no puede quedar vacía</li>
+            <li>Toda dependencia sugerida por la IA se verifica antes de adoptarla</li>
+            <li>Los permisos de las herramientas de IA en el repo son explícitos y mínimos</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- F2 -->
+<section id="f2">
+  <div class="wrap">
+    <div class="phase-head"><span class="code">F2</span><h2>Flujo de trabajo y DevOps</h2><span class="pill wip">en curso</span></div>
+    <p class="lead">Un pipeline que bloquea lo que debe bloquear y un camino claro del código a un ambiente donde se pueda probar.</p>
+    <div class="diag">
+      <h3>DIAGNÓSTICO INICIAL · RESUELTO EN PR #12 SALVO LA ENTREGA A AMBIENTES</h3>
+      <ul>
+        <li>El paso de formato reformatea, pero no falla si hay código sin formatear</li>
+        <li>La revisión de dependencias no detecta cambios sin commitear</li>
+        <li>El umbral de cobertura (35%) es global y no distingue capas</li>
+        <li>El pipeline carga un archivo de entorno del repositorio si existe</li>
+        <li>Acciones en versiones antiguas, sin controles de seguridad automáticos</li>
+        <li>No hay entrega a ningún ambiente</li>
+      </ul>
+    </div>
+    <div class="phase-grid">
+      <ol class="steps">
+        <li class="is-done"><span>Definir estrategia de ramas y convención de commits<span class="tag">DevOps</span><span class="sub">Nombres de rama ligados a la spec; tipos de commit acordados.</span></span></li>
+        <li class="is-done"><span>Proteger la rama principal<span class="tag">DevOps</span><span class="sub">Solo vía PR, con checks obligatorios y revisión.</span></span></li>
+        <li class="is-done"><span>Crear plantilla de PR<span class="tag">DevOps</span><span class="sub">Enlace a la spec, checklist de Terminado y de seguridad.</span></span></li>
+        <li class="is-done"><span>Hacer que cada control del pipeline falle de verdad<span class="tag">DevOps</span><span class="sub">Formato, dependencias, lint, arquitectura, pruebas.</span></span></li>
+        <li><span>Fijar metas de cobertura que suben por fase<span class="tag">DevOps</span><span class="sub">Más exigentes en dominio y aplicación que en adaptadores.</span></span></li>
+        <li class="is-done"><span>Agregar etapas de seguridad al pipeline<span class="tag">DevOps</span><span class="sub">Ver SEC-2.</span></span></li>
+        <li><span>Definir ambientes: local, staging, producción<span class="tag">DevOps</span><span class="sub">Qué los diferencia y quién puede desplegar en cada uno.</span></span></li>
+        <li><span>Definir versionado y proceso de release<span class="tag">DevOps</span><span class="sub">Versiones con changelog generado desde los commits.</span></span></li>
+        <li><span>Entrega continua a staging<span class="tag">DevOps</span><span class="sub">Cada merge queda probable en staging; producción solo con aprobación.</span></span></li>
+        <li class="is-done"><span>Mantenimiento periódico de dependencias<span class="tag">DevOps</span><span class="sub">Actualizaciones propuestas de forma automática y revisadas por PR.</span></span></li>
+      </ol>
+      <div class="side">
+        <div class="exit"><h3>SALE CON</h3><p>Rama principal protegida, pipeline confiable y una primera versión 0.x desplegada en staging.</p></div>
+        <div class="gate"><h3>SEC-2 · SEGURIDAD DEL PIPELINE</h3>
+          <ul>
+            <li>Secretos fuera del repositorio y del pipeline en texto plano</li>
+            <li class="is-done">Escaneo de secretos en cada commit e historial revisado</li>
+            <li class="is-done">Análisis de dependencias con vulnerabilidades conocidas</li>
+            <li class="is-done">Análisis estático de seguridad del código</li>
+            <li class="is-done">Permisos mínimos para el pipeline y acciones de terceros fijadas</li>
+            <li>Retirar del repo archivos con credenciales de ejemplo</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- F3 -->
+<section id="f3">
+  <div class="wrap">
+    <div class="phase-head"><span class="code">F3</span><h2>Identidad completa</h2><span class="pill wip">en curso</span></div>
+    <p class="lead">Una persona puede registrarse, verificar su correo, entrar, recuperar el acceso y salir sin ayuda de un administrador.</p>
+    <div class="phase-grid">
+      <ol class="steps">
+        <li class="is-wip"><span>Cerrar hallazgos de seguridad H1–H3<span class="tag">Producto</span><span class="sub">Fallas de autorización en el módulo de usuarios, en seguimiento privado. Ver SEC-0. Va antes que todo lo demás.</span></span></li>
+        <li><span>Terminar la verificación de email<span class="tag">Producto</span><span class="sub">Generar, enviar y confirmar el código. Historia piloto de F1.</span></span></li>
+        <li><span>Registro público seguro<span class="tag">Producto</span><span class="sub">Quién puede registrarse, con qué rol, y qué pasa antes de verificar.</span></span></li>
+        <li><span>Recuperación y cambio de contraseña<span class="tag">Producto</span></span></li>
+        <li><span>Ciclo de sesión<span class="tag">Producto</span><span class="sub">Expiración, renovación y cierre de sesión.</span></span></li>
+        <li><span>Perfil y preferencias<span class="tag">Producto</span><span class="sub">Moneda principal, zona horaria, idioma.</span></span></li>
+        <li><span>Desactivar o eliminar la propia cuenta<span class="tag">Producto</span></span></li>
+      </ol>
+      <div class="side">
+        <div class="exit"><h3>SALE CON</h3><p>Ciclo de identidad completo y autoservicio, sin rutas abiertas por error.</p></div>
+        <div class="gate"><h3>SEC-3 · AUTENTICACIÓN</h3>
+          <ul>
+            <li>Nadie puede asignarse un rol al registrarse</li>
+            <li>Protección contra fuerza bruta y contra enumeración de usuarios</li>
+            <li>Códigos de un solo uso con expiración y límite de intentos</li>
+            <li>Política de contraseñas definida</li>
+            <li>Revisión contra un estándar reconocido (OWASP ASVS, autenticación y sesiones)</li>
+            <li>Registro de eventos de seguridad: intentos fallidos, cambios de contraseña</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- F4 -->
+<section id="f4">
+  <div class="wrap">
+    <div class="phase-head"><span class="code">F4</span><h2>Núcleo financiero</h2><span class="pill todo">pendiente</span></div>
+    <p class="lead">El corazón del MVP: registrar y consultar el dinero propio.</p>
+    <div class="phase-grid">
+      <ol class="steps">
+        <li><span>Cuentas en varias monedas<span class="tag">Producto</span><span class="sub">Efectivo, banco, billetera digital, tarjeta de crédito; cada una con su moneda y saldo inicial.</span></span></li>
+        <li><span>Categorías de ingreso y gasto<span class="tag">Producto</span><span class="sub">Un set predeterminado más las que cree cada usuario.</span></span></li>
+        <li><span>Registrar ingresos y gastos<span class="tag">Producto</span></span></li>
+        <li><span>Transferencias entre cuentas propias<span class="tag">Producto</span><span class="sub">No cuentan como gasto ni como ingreso.</span></span></li>
+        <li><span>Saldos por cuenta y patrimonio total<span class="tag">Producto</span><span class="sub">Consolidado en la moneda principal del usuario.</span></span></li>
+        <li><span>Resumen del mes por categoría<span class="tag">Producto</span><span class="sub">Responde “en qué se me fue la plata”.</span></span></li>
+        <li><span>Listar y filtrar movimientos<span class="tag">Producto</span><span class="sub">Por fecha, cuenta, categoría y monto.</span></span></li>
+        <li><span>Corregir o anular movimientos<span class="tag">Producto</span><span class="sub">Sin perder el rastro de qué cambió.</span></span></li>
+      </ol>
+      <div class="side">
+        <div class="exit"><h3>SALE CON</h3><p>API del MVP completa: cuentas, categorías, movimientos, transferencias y saldos.</p></div>
+        <div class="gate"><h3>SEC-4 · DATOS FINANCIEROS</h3>
+          <ul>
+            <li>Aislamiento entre usuarios: nadie ve ni modifica datos ajenos, probado en cada endpoint</li>
+            <li>Exactitud de montos: sin errores de redondeo y con moneda explícita</li>
+            <li>Historial auditable de cambios sobre movimientos</li>
+            <li>Validación de toda entrada: montos, fechas, textos</li>
+            <li>Límites de uso para evitar abuso de la API</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- F5 -->
+<section id="f5">
+  <div class="wrap">
+    <div class="phase-head"><span class="code">F5</span><h2>Cliente y experiencia</h2><span class="pill todo">pendiente</span></div>
+    <p class="lead">Una interfaz que use el núcleo financiero. Sin ella la API no es una aplicación.</p>
+    <div class="phase-grid">
+      <ol class="steps">
+        <li><span>Decidir el primer cliente<span class="tag">Producto</span><span class="sub">Web, móvil o ambos; y en qué orden.</span></span></li>
+        <li><span>Diseñar los flujos principales<span class="tag">Producto</span><span class="sub">Registro, primera cuenta, primer movimiento, consulta de saldos.</span></span></li>
+        <li><span>Diseñar la bienvenida<span class="tag">Producto</span><span class="sub">Que un usuario nuevo registre su primer movimiento en minutos.</span></span></li>
+        <li><span>Construir el cliente del MVP<span class="tag">Producto</span></span></li>
+        <li><span>Definir el contrato de la API para el cliente<span class="tag">DevOps</span><span class="sub">Documentado y versionado para no romper al cliente.</span></span></li>
+        <li><span>Probar con 3–5 usuarios reales<span class="tag">Producto</span><span class="sub">Ajustar antes de lanzar.</span></span></li>
+      </ol>
+      <div class="side">
+        <div class="exit"><h3>SALE CON</h3><p>Cliente funcional del MVP validado con usuarios.</p></div>
+        <div class="gate"><h3>SEC-5 · CLIENTE</h3>
+          <ul>
+            <li>Dónde y cómo guarda el cliente la sesión</li>
+            <li>Qué orígenes pueden consumir la API</li>
+            <li>Mensajes de error que no revelan información interna</li>
+            <li>Protecciones del navegador o del dispositivo activadas</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- F6 -->
+<section id="f6">
+  <div class="wrap">
+    <div class="phase-head"><span class="code">F6</span><h2>Lanzamiento del MVP</h2><span class="pill todo">pendiente</span></div>
+    <p class="lead">Pasar de staging a producción con usuarios reales y la capacidad de operar sin sorpresas.</p>
+    <div class="phase-grid">
+      <ol class="steps">
+        <li><span>Preparar el ambiente de producción<span class="tag">DevOps</span></span></li>
+        <li><span>Respaldos automáticos y prueba de restauración<span class="tag">DevOps</span><span class="sub">Un respaldo que nunca se restauró no cuenta.</span></span></li>
+        <li><span>Monitoreo, logs y alertas<span class="tag">DevOps</span><span class="sub">Saber que algo falla antes que el usuario.</span></span></li>
+        <li><span>Plan de respuesta a incidentes<span class="tag">DevOps</span></span></li>
+        <li><span>Política de privacidad y términos de uso<span class="tag">Producto</span></span></li>
+        <li><span>Beta cerrada<span class="tag">Producto</span><span class="sub">Grupo pequeño, canal de retroalimentación, métricas de uso.</span></span></li>
+        <li><span>Lanzamiento v1.0<span class="tag">Producto</span></span></li>
+      </ol>
+      <div class="side">
+        <div class="exit"><h3>SALE CON</h3><p>MVP en producción, respaldado, monitoreado y con usuarios reales.</p></div>
+        <div class="gate"><h3>SEC-6 · PRE-LANZAMIENTO (PUERTA MAYOR)</h3>
+          <ul>
+            <li>Revisión de seguridad completa o prueba de penetración</li>
+            <li>Configuración de producción endurecida y revisada</li>
+            <li>Cifrado en tránsito y en reposo</li>
+            <li>Restauración de respaldo probada con éxito</li>
+            <li>Procedimiento para notificar a usuarios si hay un incidente</li>
+            <li>Repaso del modelo de amenazas de SEC-0</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- F7 -->
+<section id="f7">
+  <div class="wrap">
+    <div class="phase-head"><span class="code">F7</span><h2>Planeación financiera</h2><span class="pill todo">pendiente</span></div>
+    <p class="lead">Del registro a la planeación: la app ayuda a decidir, no solo a anotar.</p>
+    <div class="phase-grid">
+      <ol class="steps">
+        <li><span>Presupuestos por categoría y mes<span class="tag">Producto</span></span></li>
+        <li><span>Metas de ahorro con avance<span class="tag">Producto</span></span></li>
+        <li><span>Movimientos recurrentes<span class="tag">Producto</span><span class="sub">Arriendo, suscripciones, salario.</span></span></li>
+        <li><span>Alertas y recordatorios<span class="tag">Producto</span><span class="sub">Presupuesto por agotarse, pago próximo.</span></span></li>
+        <li><span>Deudas y préstamos<span class="tag">Producto</span></span></li>
+      </ol>
+      <div class="side">
+        <div class="exit"><h3>SALE CON</h3><p>Versión 1.x con presupuestos, metas y recurrentes.</p></div>
+        <div class="gate"><h3>SEC-7 · PROCESOS AUTOMÁTICOS</h3>
+          <ul>
+            <li>Los procesos programados solo actúan sobre datos de su dueño</li>
+            <li>Las notificaciones no exponen montos o datos sensibles fuera de la app</li>
+            <li>Límites de frecuencia en alertas y envíos</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- F8 -->
+<section id="f8">
+  <div class="wrap">
+    <div class="phase-head"><span class="code">F8</span><h2>Análisis e importación</h2><span class="pill todo">pendiente</span></div>
+    <p class="lead">Entender los datos y reducir el trabajo de registrarlos a mano.</p>
+    <div class="phase-grid">
+      <ol class="steps">
+        <li><span>Comparación entre meses<span class="tag">Producto</span><span class="sub">Ingresos, gastos y ahorro frente a meses anteriores.</span></span></li>
+        <li><span>Tendencias y gasto por categoría<span class="tag">Producto</span></span></li>
+        <li><span>Exportar los propios datos<span class="tag">Producto</span></span></li>
+        <li><span>Importar extractos bancarios<span class="tag">Producto</span><span class="sub">Con detección de duplicados.</span></span></li>
+        <li><span>Reglas de categorización automática<span class="tag">Producto</span></span></li>
+      </ol>
+      <div class="side">
+        <div class="exit"><h3>SALE CON</h3><p>Reportes útiles y entrada de datos asistida.</p></div>
+        <div class="gate"><h3>SEC-8 · ARCHIVOS Y EXPORTACIÓN</h3>
+          <ul>
+            <li>Todo archivo subido es entrada no confiable: tamaño, formato y contenido</li>
+            <li>Una exportación solo incluye datos del solicitante</li>
+            <li>El usuario puede obtener y borrar todos sus datos</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- F9 -->
+<section id="f9">
+  <div class="wrap">
+    <div class="phase-head"><span class="code">F9</span><h2>Evolución</h2><span class="pill todo">pendiente</span></div>
+    <p class="lead">Ideas para después del producto base. Cada una entra al backlog como spec propia cuando llegue su turno.</p>
+    <div class="phase-grid">
+      <ol class="steps">
+                <li><span>Finanzas compartidas de hogar o pareja<span class="tag">Producto</span></span></li>
+        <li><span>Conexión directa con bancos<span class="tag">Producto</span></span></li>
+        <li><span>Asistente con IA para categorizar y dar recomendaciones<span class="tag">IA</span></span></li>
+        <li><span>App móvil nativa, si F5 empezó por web<span class="tag">Producto</span></span></li>
+      </ol>
+      <div class="side">
+        <div class="exit"><h3>SALE CON</h3><p>Hoja de ruta 2.0 priorizada con datos de uso real.</p></div>
+        <div class="gate"><h3>SEC-9 · TERCEROS Y DATOS COMPARTIDOS</h3>
+          <ul>
+            <li>Datos compartidos exigen un modelo de permisos nuevo y revisado</li>
+            <li>Cada integración con terceros pasa por evaluación del proveedor</li>
+            <li>Usar IA sobre datos financieros requiere consentimiento explícito</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cierre">
+  <div class="wrap">
+    <h2>Cómo se cierra cada fase</h2>
+    <p class="lead">Una fase no termina por tener el código listo; termina cuando pasa estos cuatro pasos.</p>
+    <div class="ritual">
+      <div class="box"><h3><span class="mono" style="color:var(--accent)">1</span> Specs cerradas</h3><p>Todas las historias de la fase cumplen Terminado y están enlazadas a sus PRs.</p></div>
+      <div class="box"><h3><span class="mono" style="color:var(--sec)">2</span> Punto SEC aprobado</h3><p>Cada ítem del control revisado y con evidencia. Lo que no pasa se vuelve historia.</p></div>
+      <div class="box"><h3><span class="mono" style="color:var(--accent)">3</span> Release</h3><p>Versión etiquetada, changelog y despliegue al ambiente que corresponda.</p></div>
+      <div class="box"><h3><span class="mono" style="color:var(--accent)">4</span> Retro y contexto</h3><p>Qué funcionó, qué ajustar en la plantilla y en las skills; contexto de IA actualizado.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">Fuente: <span class="mono">Docs/roadmap.html</span> en el repositorio Finanzas-Go. Actualizar el estado de cada fase al cerrarla.</div>
+</footer>
+
+</body>
+</html>
