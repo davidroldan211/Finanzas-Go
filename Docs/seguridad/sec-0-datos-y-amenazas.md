@@ -94,7 +94,7 @@ Consecuencia para el alcance: HU-21 (exportar y borrar mis datos) probablemente 
 
 ## 5. Hallazgos en el código actual
 
-El 2026-11-14 se encontraron tres fallas de autorización en el módulo `users`. Se registraron en el GitHub Security Advisory privado `GHSA-j36w-x5rp-5f3w` y se **corrigieron el mismo día en el PR #22**.
+El 2026-11-14 se encontraron tres fallas de autorización en el módulo `users`. Se registraron en un GitHub Security Advisory privado, se **corrigieron el mismo día en el PR #22** y el advisory se publicó el 2026-11-14: [GHSA-j36w-x5rp-5f3w](https://github.com/davidroldan211/Finanzas-Go/security/advisories/GHSA-j36w-x5rp-5f3w).
 
 | # | Hallazgo | Escenario | Corrección (#22) |
 |---|---|---|---|
@@ -105,8 +105,6 @@ El 2026-11-14 se encontraron tres fallas de autorización en el módulo `users`.
 **Verificación:** 12 pruebas automáticas nuevas y prueba de punta a punta contra la API con Postgres local (registro con `role: admin` crea `user`; leer o modificar a otro usuario da 404; ascenderse da 403; editar el propio perfil da 200).
 
 **Lección para los módulos siguientes:** la autorización vive en la capa `application` mediante `in.Actor` (ID y rol del token). Todo caso de uso que reciba un identificador de recurso debe verificar que pertenece al actor; es el control central de SEC-4.
-
-**Pendiente:** publicar el advisory `GHSA-j36w-x5rp-5f3w` (hoy en borrador) y enlazarlo aquí.
 
 ## 6. Criterio de aprobación de SEC-0
 
