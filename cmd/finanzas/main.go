@@ -45,10 +45,12 @@ func main() {
 
 	r = gin.Default()
 
+	trustedProxies := []string(nil)
 	if config.App.Environment == "production" {
-		r.SetTrustedProxies(config.Server.TrustedProxies)
-	} else {
-		r.SetTrustedProxies(nil)
+		trustedProxies = config.Server.TrustedProxies
+	}
+	if err := r.SetTrustedProxies(trustedProxies); err != nil {
+		log.Fatalf("Error configurando trusted proxies: %v", err)
 	}
 
 	db, err = DataBase.NewPostgresDB(config)
@@ -69,6 +71,8 @@ func main() {
 	verifyModule.RegisterRoutes(r)
 
 	log.Println("🚀 Servidor iniciado en " + config.Server.Host + ":" + strconv.Itoa(config.Server.Port))
-	r.Run(config.Server.Host + ":" + strconv.Itoa(config.Server.Port))
+	if err := r.Run(config.Server.Host + ":" + strconv.Itoa(config.Server.Port)); err != nil {
+		log.Fatalf("Error iniciando el servidor: %v", err)
+	}
 
 }

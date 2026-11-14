@@ -6,7 +6,7 @@ ifneq (,$(wildcard .env))
 	export $(shell sed 's/=.*//' .env)
 endif
 
-.PHONY: run build clean test fmt lint arch help coverage migrate-up migrate-down migrate-status migrate-reset migrate-create
+.PHONY: run build clean test fmt fmt-check tidy-check vet lint golangci vuln ci arch help coverage migrate-up migrate-down migrate-status migrate-reset migrate-create
 
 APP_NAME?=mi-proyecto
 MAIN?=./cmd/finanzas
@@ -38,9 +38,35 @@ clean:
 	go clean
 	rm -rf bin/
 
-## lint: Linter con go vet
-lint: arch
+## vet: Análisis estático estándar de Go
+vet:
 	go vet ./...
+
+## lint: go vet + fronteras de la arquitectura
+lint: vet arch
+
+## golangci: Linter completo (requiere golangci-lint v2 instalado)
+golangci:
+	golangci-lint run ./...
+
+## vuln: Busca vulnerabilidades conocidas en dependencias (requiere govulncheck)
+vuln:
+	govulncheck ./...
+
+## fmt-check: Falla si hay archivos sin formatear (no modifica nada)
+fmt-check:
+	@out=$$(gofmt -l $$(git ls-files '*.go')); \
+	if [ -n "$$out" ]; then \
+		echo "❌ Archivos sin formato (correr make fmt):"; echo "$$out"; exit 1; \
+	fi
+	@echo "✅ Formato correcto"
+
+## tidy-check: Falla si go.mod/go.sum no están al día (no modifica nada)
+tidy-check:
+	go mod tidy -diff
+
+## ci: Ejecuta localmente los controles del pipeline (sin Postgres ni golangci)
+ci: fmt-check tidy-check lint coverage build
 
 ## arch: Verifica que el núcleo hexagonal (domain/application/port) no
 ## dependa de frameworks ni de infraestructura
@@ -67,7 +93,7 @@ coverage:
 	@echo ""
 	@echo "📦 Ejecutando pruebas y generando perfil de cobertura... "
 	@echo ""
-	@go test -coverprofile=coverage.out ./...
+	@go test -race -coverprofile=coverage.out ./...
 
 	@echo ""
 	@echo "📊 Resumen de cobertura por función:"

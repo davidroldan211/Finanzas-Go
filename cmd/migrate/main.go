@@ -50,21 +50,23 @@ func main() {
 		log.Fatalf("migrate: fijando dialecto: %v", err)
 	}
 
+	// op es un literal fijo por rama: el log nunca incluye texto crudo de os.Args.
+	var op string
 	switch command {
 	case "up":
-		err = goose.Up(sqlDB, migrationsDir)
+		op, err = "up", goose.Up(sqlDB, migrationsDir)
 	case "down":
-		err = goose.Down(sqlDB, migrationsDir)
+		op, err = "down", goose.Down(sqlDB, migrationsDir)
 	case "status":
-		err = goose.Status(sqlDB, migrationsDir)
+		op, err = "status", goose.Status(sqlDB, migrationsDir)
 	case "reset":
-		err = goose.Reset(sqlDB, migrationsDir)
+		op, err = "reset", goose.Reset(sqlDB, migrationsDir)
 	default:
 		usage()
 		os.Exit(1)
 	}
 	if err != nil {
-		log.Fatalf("migrate: %s: %v", command, err)
+		log.Fatalf("migrate: %s: %v", op, err)
 	}
 }
 

@@ -1,13 +1,13 @@
 package users
 
 import (
+	"finanzas-api/internal/httpx"
 	userhttp "finanzas-api/internal/users/adapter/in/http"
 	"finanzas-api/internal/users/adapter/out/postgres"
 	"finanzas-api/internal/users/application"
 	"finanzas-api/internal/users/port/in"
 	"finanzas-api/internal/users/port/out"
 
-	"finanzas-api/internal/httpx"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )

@@ -1,0 +1,22 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  # standard = errcheck, govet, ineffassign, staticcheck, unused
+  default: standard
+  enable:
+    - gosec # reglas de seguridad
+    - bodyclose
+    - errorlint # uso correcto de errors.Is / errors.As
+    # misspell no se usa: solo conoce inglés y los comentarios están en español.
+  exclusions:
+    presets:
+      - comments
+      - std-error-handling
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

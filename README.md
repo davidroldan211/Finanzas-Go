@@ -1,5 +1,8 @@
 # 🏦 Finanzas Personales
 
+[![CI](https://github.com/davidroldan211/Finanzas-Go/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/davidroldan211/Finanzas-Go/actions/workflows/ci.yml)
+[![Seguridad](https://github.com/davidroldan211/Finanzas-Go/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/davidroldan211/Finanzas-Go/actions/workflows/security.yml)
+
 Sistema backend para la gestión de finanzas personales, desarrollado en Go con una arquitectura hexagonal, modular y escalable, orientado a entornos empresariales.
 
 ---
@@ -10,7 +13,7 @@ El proyecto esta construido siguiendo los lineamientos de [Arquitectura Hexagona
 
 ## ⚙️ Requisitos
 
-- Go 1.21 o superior
+- Go 1.26 o superior (la versión exacta está en `go.mod`)
 - Docker y Docker Compose
 - `make` 
 
@@ -21,7 +24,7 @@ El proyecto esta construido siguiendo los lineamientos de [Arquitectura Hexagona
 git clone https://github.com/davidroldan211/Finanzas-Go.git
 ```
 ```bash
-cd finanzas-personales
+cd Finanzas-Go
 ```
 ```bash
 go mod tidy
@@ -104,10 +107,13 @@ make test      # Ejecutar tests
 make fmt       # Formatear código
 ```
 ```bash
-make lint      # Revisar calidad del código con go vet
+make lint      # go vet + fronteras de la arquitectura
 ```
-```bash 
-make coverage  # Valida cobertura de pruebas 
+```bash
+make coverage  # Pruebas con -race y cobertura mínima
+```
+```bash
+make ci        # Mismos controles que el pipeline
 ```
 ```bash
 make migrate-up      # Aplicar migraciones pendientes
@@ -134,27 +140,14 @@ make migrate-status  # Ver estado de las migraciones
 
 
 ## 🧩 Roadmap
-- Conexión a base de datos
-- Autenticación con JWT
-- CRUD de presupuestos personales
-- Reportes mensuales
-- Dashboard financiero
-
+El plan por fases, con puntos de control de seguridad, está en [Docs/roadmap.html](Docs/roadmap.html). Visión y alcance del producto en [Docs/producto/](Docs/producto/).
 
 
 ## 🤝 Contribuciones
-1. Haz un fork del repositorio.
-
-2. Crea una rama con tu funcionalidad: git checkout -b feature/nueva-funcionalidad.
-
-3. Realiza tus cambios y haz commit: git commit -m 'feat: agrega nueva funcionalidad'.
-
-4. Haz push a la rama: git push origin feature/nueva-funcionalidad.
-
-5. Abre un Pull Request.
+Ver [CONTRIBUTING.md](CONTRIBUTING.md). Las vulnerabilidades se reportan en privado según [SECURITY.md](SECURITY.md).
 
 
 
 ## 📝 Licencia
-MIT © 2025 David Roldán
+© 2025 David Roldán. Todos los derechos reservados. El código es visible públicamente, pero no se concede licencia de uso, copia ni distribución.
 
