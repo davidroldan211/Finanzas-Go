@@ -22,11 +22,14 @@ func NewUserService(repo out.UserRepository, hasher out.PasswordHasher) in.UserS
 	return &userService{repo: repo, hasher: hasher}
 }
 
-// TODO: se debe ajustar el crear usuario para que valide bearer token una
-// vez que se implemente la validación de correos (internal/verification).
+// Create es el registro público. El rol siempre es user; un admin solo se
+// crea promoviendo a un usuario existente vía Update.
+//
+// TODO: exigir correo verificado antes de activar la cuenta cuando se
+// implemente internal/verification.
 func (s *userService) Create(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error) {
 	// Validar y normalizar antes de tocar el repositorio o el hasher.
-	user, err := domain.NewUser(cmd.Email, cmd.FirstName, cmd.LastName, "", cmd.Role)
+	user, err := domain.NewUser(cmd.Email, cmd.FirstName, cmd.LastName, "", domain.RoleUser)
 	if err != nil {
 		return nil, err
 	}
@@ -51,9 +54,14 @@ func (s *userService) Create(ctx context.Context, cmd in.CreateUserCommand) (*do
 	return user, nil
 }
 
-func (s *userService) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+func (s *userService) GetByID(ctx context.Context, actor in.Actor, id uuid.UUID) (*domain.User, error) {
 	if id == uuid.Nil {
 		return nil, domain.ErrInvalidUserID
+	}
+	// Un usuario ajeno responde igual que uno inexistente: no se revela
+	// qué IDs existen.
+	if !actor.CanAccess(id) {
+		return nil, domain.ErrUserNotFound
 	}
 	return s.repo.FindByID(ctx, id)
 }
@@ -66,9 +74,16 @@ func (s *userService) GetByEmail(ctx context.Context, email string) (*domain.Use
 	return s.repo.FindByEmail(ctx, email)
 }
 
-func (s *userService) Update(ctx context.Context, cmd in.UpdateUserCommand) (*domain.User, error) {
+func (s *userService) Update(ctx context.Context, actor in.Actor, cmd in.UpdateUserCommand) (*domain.User, error) {
 	if cmd.ID == uuid.Nil {
 		return nil, domain.ErrInvalidUserID
+	}
+	if !actor.CanAccess(cmd.ID) {
+		return nil, domain.ErrUserNotFound
+	}
+	// Rol y estado de la cuenta son decisiones de administración.
+	if !actor.IsAdmin() && (cmd.Role != nil || cmd.IsActive != nil) {
+		return nil, domain.ErrForbidden
 	}
 
 	user, err := s.repo.FindByID(ctx, cmd.ID)

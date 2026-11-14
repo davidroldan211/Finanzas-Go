@@ -60,8 +60,8 @@ func (g *Guard) Handler(roles ...string) gin.HandlerFunc {
 			}
 		}
 
-		c.Set("userID", claims.Subject)
-		c.Set("userRole", claims.Role)
+		c.Set(httpx.CtxUserID, claims.Subject)
+		c.Set(httpx.CtxUserRole, claims.Role)
 		c.Next()
 	}
 }

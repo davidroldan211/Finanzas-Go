@@ -15,6 +15,13 @@ import (
 // el módulo que las autentica.
 type AuthGuard func(roles ...string) gin.HandlerFunc
 
+// Claves con las que el AuthGuard deja la identidad verificada en el
+// contexto de Gin. Los módulos las leen desde aquí, sin importar auth.
+const (
+	CtxUserID   = "userID"
+	CtxUserRole = "userRole"
+)
+
 // errorBody es el envelope único de error de la API.
 type errorBody struct {
 	Error *AppError `json:"error"`

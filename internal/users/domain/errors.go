@@ -9,6 +9,9 @@ var (
 	ErrEmailTaken = errors.New("email already in use")
 	// ErrInvalidUserID indica que el ID de usuario es inválido (nulo/vacío).
 	ErrInvalidUserID = errors.New("invalid user id")
+	// ErrForbidden indica que quien ejecuta la operación no tiene permiso
+	// para el cambio pedido (p.ej. un usuario que intenta cambiar su rol).
+	ErrForbidden = errors.New("forbidden")
 )
 
 // ValidationError agrupa errores de campo. Los adaptadores de entrada la

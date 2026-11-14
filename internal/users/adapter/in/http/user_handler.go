@@ -47,7 +47,13 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetByID(c.Request.Context(), id)
+	actor, ok := actorFrom(c)
+	if !ok {
+		httpx.Abort(c, httpx.Unauthorized(""))
+		return
+	}
+
+	user, err := h.userService.GetByID(c.Request.Context(), actor, id)
 	if err != nil {
 		httpx.Abort(c, toAppError(err))
 		return
@@ -64,12 +70,18 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
+	actor, ok := actorFrom(c)
+	if !ok {
+		httpx.Abort(c, httpx.Unauthorized(""))
+		return
+	}
+
 	var req UpdateUserRequest
 	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
-	user, err := h.userService.Update(c.Request.Context(), req.toCommand(id))
+	user, err := h.userService.Update(c.Request.Context(), actor, req.toCommand(id))
 	if err != nil {
 		httpx.Abort(c, toAppError(err))
 		return
@@ -79,6 +91,17 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		"message": "User updated successfully",
 		"user":    toUserResponse(user),
 	})
+}
+
+// actorFrom lee la identidad que el AuthGuard dejó en el contexto. Devuelve
+// false si la ruta no pasó por el guard o los datos no son válidos.
+func actorFrom(c *gin.Context) (in.Actor, bool) {
+	id, err := uuid.Parse(c.GetString(httpx.CtxUserID))
+	role := c.GetString(httpx.CtxUserRole)
+	if err != nil || id == uuid.Nil || role == "" {
+		return in.Actor{}, false
+	}
+	return in.Actor{ID: id, Role: role}, true
 }
 
 // DeleteUser elimina un usuario.

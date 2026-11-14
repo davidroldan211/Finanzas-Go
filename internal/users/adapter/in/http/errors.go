@@ -18,6 +18,8 @@ func toAppError(err error) *httpx.AppError {
 		return httpx.NotFound("Usuario no encontrado.").WithErr(err)
 	case errors.Is(err, domain.ErrEmailTaken):
 		return httpx.Conflict("El email ya está registrado.").WithErr(err)
+	case errors.Is(err, domain.ErrForbidden):
+		return httpx.Forbidden("Solo un administrador puede cambiar el rol o el estado de una cuenta.").WithErr(err)
 	case errors.Is(err, domain.ErrInvalidUserID):
 		return httpx.BadRequest("ID de usuario inválido.").WithErr(err)
 	case errors.As(err, &ve):

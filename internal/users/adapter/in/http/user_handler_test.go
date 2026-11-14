@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"finanzas-api/internal/httpx"
 	"finanzas-api/internal/users/domain"
 	"finanzas-api/internal/users/port/in"
 
@@ -21,8 +22,8 @@ func init() {
 
 type stubUserService struct {
 	createFunc   func(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error)
-	getByIDFunc  func(ctx context.Context, id uuid.UUID) (*domain.User, error)
-	updateFunc   func(ctx context.Context, cmd in.UpdateUserCommand) (*domain.User, error)
+	getByIDFunc  func(ctx context.Context, actor in.Actor, id uuid.UUID) (*domain.User, error)
+	updateFunc   func(ctx context.Context, actor in.Actor, cmd in.UpdateUserCommand) (*domain.User, error)
 	deleteFunc   func(ctx context.Context, id uuid.UUID) error
 	listFunc     func(ctx context.Context, q in.ListUsersQuery) ([]*domain.User, error)
 	getByEmailFn func(ctx context.Context, email string) (*domain.User, error)
@@ -31,14 +32,14 @@ type stubUserService struct {
 func (s *stubUserService) Create(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error) {
 	return s.createFunc(ctx, cmd)
 }
-func (s *stubUserService) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
-	return s.getByIDFunc(ctx, id)
+func (s *stubUserService) GetByID(ctx context.Context, actor in.Actor, id uuid.UUID) (*domain.User, error) {
+	return s.getByIDFunc(ctx, actor, id)
 }
 func (s *stubUserService) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	return s.getByEmailFn(ctx, email)
 }
-func (s *stubUserService) Update(ctx context.Context, cmd in.UpdateUserCommand) (*domain.User, error) {
-	return s.updateFunc(ctx, cmd)
+func (s *stubUserService) Update(ctx context.Context, actor in.Actor, cmd in.UpdateUserCommand) (*domain.User, error) {
+	return s.updateFunc(ctx, actor, cmd)
 }
 func (s *stubUserService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.deleteFunc(ctx, id)
@@ -155,13 +156,14 @@ func TestCreateUser_GenericError_Returns500WithoutLeakingMessage(t *testing.T) {
 
 func TestGetUser_NotFound_Returns404(t *testing.T) {
 	svc := &stubUserService{
-		getByIDFunc: func(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+		getByIDFunc: func(ctx context.Context, actor in.Actor, id uuid.UUID) (*domain.User, error) {
 			return nil, domain.ErrUserNotFound
 		},
 	}
 	h := NewUserHandler(svc)
 	c, w := newTestContext("GET", "/users/11111111-1111-1111-1111-111111111111", "")
 	c.Params = gin.Params{{Key: "id", Value: "11111111-1111-1111-1111-111111111111"}}
+	setActor(c, fixedUser.ID.String(), "user")
 
 	h.GetUser(c)
 
@@ -222,5 +224,113 @@ func TestListUsers_NonNumericParams_DefaultToZero(t *testing.T) {
 	}
 	if gotQuery.Limit != 0 || gotQuery.Offset != 0 {
 		t.Fatalf("expected limit/offset 0 on non-numeric input, got %+v", gotQuery)
+	}
+}
+
+// setActor simula lo que deja el AuthGuard en el contexto.
+func setActor(c *gin.Context, id, role string) {
+	c.Set(httpx.CtxUserID, id)
+	c.Set(httpx.CtxUserRole, role)
+}
+
+// --- Autorización (GHSA-j36w-x5rp-5f3w) ---
+
+func TestGetUser_WithoutActor_Returns401(t *testing.T) {
+	svc := &stubUserService{
+		getByIDFunc: func(ctx context.Context, actor in.Actor, id uuid.UUID) (*domain.User, error) {
+			t.Fatal("service must not be called without an authenticated actor")
+			return nil, nil
+		},
+	}
+	h := NewUserHandler(svc)
+	c, w := newTestContext("GET", "/users/"+fixedUser.ID.String(), "")
+	c.Params = gin.Params{{Key: "id", Value: fixedUser.ID.String()}}
+
+	h.GetUser(c)
+
+	if w.Code != 401 {
+		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUser_PassesActorFromContext(t *testing.T) {
+	var got in.Actor
+	svc := &stubUserService{
+		getByIDFunc: func(ctx context.Context, actor in.Actor, id uuid.UUID) (*domain.User, error) {
+			got = actor
+			return fixedUser, nil
+		},
+	}
+	h := NewUserHandler(svc)
+	c, w := newTestContext("GET", "/users/"+fixedUser.ID.String(), "")
+	c.Params = gin.Params{{Key: "id", Value: fixedUser.ID.String()}}
+	setActor(c, fixedUser.ID.String(), "user")
+
+	h.GetUser(c)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if got.ID != fixedUser.ID || got.Role != "user" {
+		t.Fatalf("actor not propagated: %+v", got)
+	}
+}
+
+func TestUpdateUser_Forbidden_Returns403(t *testing.T) {
+	svc := &stubUserService{
+		updateFunc: func(ctx context.Context, actor in.Actor, cmd in.UpdateUserCommand) (*domain.User, error) {
+			return nil, domain.ErrForbidden
+		},
+	}
+	h := NewUserHandler(svc)
+	c, w := newTestContext("PUT", "/users/"+fixedUser.ID.String(), `{"role":"admin"}`)
+	c.Params = gin.Params{{Key: "id", Value: fixedUser.ID.String()}}
+	setActor(c, fixedUser.ID.String(), "user")
+
+	h.UpdateUser(c)
+
+	if w.Code != 403 {
+		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUpdateUser_WithoutActor_Returns401(t *testing.T) {
+	svc := &stubUserService{
+		updateFunc: func(ctx context.Context, actor in.Actor, cmd in.UpdateUserCommand) (*domain.User, error) {
+			t.Fatal("service must not be called without an authenticated actor")
+			return nil, nil
+		},
+	}
+	h := NewUserHandler(svc)
+	c, w := newTestContext("PUT", "/users/"+fixedUser.ID.String(), `{"first_name":"X"}`)
+	c.Params = gin.Params{{Key: "id", Value: fixedUser.ID.String()}}
+	setActor(c, "not-a-uuid", "user")
+
+	h.UpdateUser(c)
+
+	if w.Code != 401 {
+		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestCreateUser_RoleInBodyIsIgnored(t *testing.T) {
+	var got in.CreateUserCommand
+	svc := &stubUserService{
+		createFunc: func(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error) {
+			got = cmd
+			return fixedUser, nil
+		},
+	}
+	h := NewUserHandler(svc)
+	body := `{"email":"x@y.com","first_name":"X","last_name":"Y","password":"secret-123","role":"admin"}`
+	c, w := newTestContext("POST", "/users", body)
+
+	h.CreateUser(c)
+
+	if w.Code != 201 {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+	if got.Email != "x@y.com" {
+		t.Fatalf("command not built from body: %+v", got)
 	}
 }
