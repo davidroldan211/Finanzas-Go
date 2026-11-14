@@ -114,7 +114,8 @@ jobs:
     timeout-minutes: 10
     services:
       postgres:
-        image: postgres:14.3
+        # Mantener igual a la versión de docker-compose.yaml.
+        image: postgres:18.0
         env:
           POSTGRES_DB: finanzas_ci
           POSTGRES_USER: finanzas_ci
