@@ -52,7 +52,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
-	github.com/quic-go/quic-go v0.59.0 // indirect
+	github.com/quic-go/quic-go v0.59.1 // indirect
 	github.com/sethvargo/go-retry v0.5.0 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
