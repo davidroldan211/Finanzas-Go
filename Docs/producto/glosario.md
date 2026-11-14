@@ -1,6 +1,6 @@
 # Glosario del dominio — Finanzas-Go
 
-> Fase F0 del [roadmap](../roadmap.html). Estado: **borrador para revisión** · 2026-11-14
+> Fase F0 del [roadmap](../roadmap.html). Estado: **aprobado** · 2026-11-14
 
 Un solo significado por término. Specs, código, interfaz y conversaciones con la IA usan estas palabras con este sentido. Si un término nuevo aparece en una spec, se agrega aquí primero.
 
@@ -21,7 +21,8 @@ La columna **En la interfaz** indica cómo se le muestra al usuario cuando el t�
 | **Moneda** | Unidad monetaria identificada por su código ISO 4217 (COP, USD, EUR). | — |
 | **Moneda principal** | Moneda que el usuario elige para ver totales consolidados. Por defecto, COP. | "Mi moneda" |
 | **Monto** | Cantidad de dinero en una moneda específica. Un monto sin moneda no existe. | — |
-| **Tasa de cambio** | Cuántas unidades de la moneda principal equivalen a una unidad de otra moneda en una fecha dada. Solo se usa para consolidar; nunca cambia los montos registrados. | — |
+| **Tasa de cambio** | Cuántas unidades de la moneda principal equivalen a una unidad de otra moneda en una fecha dada. La app toma una tasa diaria de una fuente pública y el usuario puede ajustarla. Solo se usa para consolidar; nunca cambia los montos registrados. | — |
+| **Tasa ajustada** | Tasa de cambio que el usuario corrigió a mano para una fecha; reemplaza a la automática en sus totales. | — |
 
 ## Cuentas
 
@@ -33,6 +34,11 @@ La columna **En la interfaz** indica cómo se le muestra al usuario cuando el t�
 | **Cuenta de pasivo** | Cuenta cuyo saldo es dinero que el usuario debe: tarjeta de crédito, préstamo. | "Lo que debo" |
 | **Saldo inicial** | Saldo de la cuenta en el momento en que el usuario empieza a registrarla. Punto de partida del saldo. | — |
 | **Saldo** | Saldo inicial más todos los movimientos vigentes de la cuenta. Siempre en la moneda de la cuenta. | — |
+| **Cupo** | Monto máximo que el banco permite deber en una tarjeta de crédito. | — |
+| **Cupo disponible** | Cupo menos el saldo adeudado de la tarjeta. | — |
+| **Fecha de corte** | Día del mes en que el banco cierra el periodo de la tarjeta y calcula lo que hay que pagar. | — |
+| **Fecha límite de pago** | Último día para pagar lo facturado al corte sin cargos de mora. | — |
+| **Saldo a pagar del periodo** | Lo que se gastó con la tarjeta entre el corte anterior y el último corte, menos lo que ya se pagó. | "Lo que debo pagar" |
 | **Cuenta archivada** | Cuenta que ya no se usa. Conserva su historial y sigue contando en reportes pasados, pero no aparece para registrar movimientos nuevos. | — |
 | **Patrimonio** | Suma de los saldos de las cuentas de activo menos la suma de los saldos de las cuentas de pasivo, convertida a la moneda principal. | "Mi patrimonio" o "Total" |
 
@@ -40,12 +46,12 @@ La columna **En la interfaz** indica cómo se le muestra al usuario cuando el t�
 
 | Término | Definición | En la interfaz |
 |---|---|---|
-| **Movimiento** | Registro de dinero que entra, sale o se mueve. Tiene monto, fecha, cuenta, descripción opcional y, si aplica, categoría. Es el dato central de la app. | — |
+| **Movimiento** | Registro de dinero que entra, sale o se mueve. Tiene monto, fecha (hoy o anterior; en el MVP no hay fechas futuras), cuenta, descripción opcional y, si aplica, categoría. Es el dato central de la app. | — |
 | **Ingreso** | Movimiento que aumenta el dinero del usuario desde fuera (salario, pago recibido). Lleva categoría de ingreso. | — |
 | **Gasto** | Movimiento que disminuye el dinero del usuario hacia fuera (compra, servicio). Lleva categoría de gasto. Una compra con tarjeta de crédito es un gasto en la cuenta de la tarjeta. | — |
-| **Transferencia** | Movimiento de dinero entre dos cuentas del mismo usuario. No es ingreso ni gasto y no lleva categoría. Si las cuentas tienen monedas distintas, registra el monto que sale y el que llega. | — |
+| **Transferencia** | Movimiento de dinero entre dos cuentas del mismo usuario. No es ingreso ni gasto y no lleva categoría. Si las cuentas tienen monedas distintas, registra el monto que sale y el que llega; la tasa queda implícita. | — |
 | **Pago de tarjeta** | Transferencia desde una cuenta de activo hacia una tarjeta de crédito. Reduce la deuda; el gasto ya se contó cuando se usó la tarjeta. | — |
-| **Corrección** | Cambio a un movimiento existente. Queda registro de qué cambió y cuándo. | "Editar" |
+| **Corrección** | Cambio a un movimiento existente, sin importar su antigüedad. Queda registro de qué cambió y cuándo. | "Editar" |
 | **Anulación** | Marcar un movimiento como no válido. Deja de afectar saldos y reportes, pero no se borra. | "Anular" |
 | **Movimiento recurrente** | Plantilla que genera movimientos con una periodicidad (mensual, quincenal…). Posterior al MVP. | — |
 
