@@ -1,0 +1,41 @@
+name: Historia de usuario
+description: Nueva funcionalidad descrita desde el punto de vista del usuario.
+title: "HU-xx: "
+labels: [historia]
+body:
+  - type: input
+    id: capacidad
+    attributes:
+      label: Capacidad
+      description: ID del backlog en Docs/producto/alcance.md
+      placeholder: CAP-20
+  - type: textarea
+    id: historia
+    attributes:
+      label: Historia
+      placeholder: Como <tipo de usuario> quiero <acción> para <beneficio>.
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      placeholder: |
+        - Dado ... cuando ... entonces ...
+    validations:
+      required: true
+  - type: textarea
+    id: fuera
+    attributes:
+      label: Fuera de alcance
+  - type: textarea
+    id: seguridad
+    attributes:
+      label: Impacto en seguridad
+      description: Datos que toca, quién puede acceder, escenarios de SEC-0 relacionados. No puede quedar vacío.
+    validations:
+      required: true
+  - type: textarea
+    id: preguntas
+    attributes:
+      label: Preguntas abiertas

@@ -9,9 +9,11 @@ make run             # go run ./cmd/finanzas
 make build           # compila binario a bin/
 make test            # go test ./...
 make lint            # go vet ./... + make arch
+make ci              # fmt-check + tidy-check + lint + coverage + build (paridad con el pipeline)
+make golangci        # golangci-lint v2 (.golangci.yml); también corre en CI
 make arch            # verifica que domain/application/port no importen gin/gorm/config/httpx
 make fmt             # go fmt ./...
-make coverage        # test + reporte de cobertura, falla si total < 5%
+make coverage        # test con -race + reporte de cobertura, falla si total < 35%
 make migrate-up      # aplica las migraciones pendientes
 make migrate-down    # revierte la última migración
 make migrate-status  # muestra qué migraciones están aplicadas
@@ -28,6 +30,14 @@ Requiere Docker (`docker compose up -d`) para Postgres, y archivo `.env` (ver `.
 Las migraciones viven en `db/migrations/*.sql`, numeradas secuencialmente (`00001_...`, `00002_...`) y se aplican con `goose` (`github.com/pressly/goose/v3`) a través de `cmd/migrate` — no hay `AutoMigrate`, los structs GORM (`userModel`, `verificationModel`, ...) no son la fuente de verdad del esquema, las migraciones sí. `db/migrations.go` las embebe (`//go:embed migrations/*.sql`) para que el binario no dependa del disco.
 
 **Regla dura: una migración ya mergeada a `main` no se edita nunca.** Un cambio de esquema posterior siempre es un archivo nuevo con número mayor (`make migrate-create name=algo`), con su bloque `-- +goose Down` para poder revertirlo. Editar una migración vieja deja bases ya creadas con un esquema que el archivo ya no describe, sin forma de detectarlo.
+
+## Flujo de trabajo
+
+- Rama desde `main` con prefijo (`feat/`, `fix/`, `docs/`, `chore/`, `ci/`...); PR con título Conventional Commits (squash merge). Ver `CONTRIBUTING.md`.
+- `main` solo acepta PRs con el check `CI OK` en verde (agrega Lint, Test, Build, Vulnerabilidades, Migraciones).
+- Acciones de GitHub fijadas por SHA con comentario de versión; Dependabot las actualiza.
+- Producto: visión, alcance (CAP-xx, HU-xx) y glosario en `Docs/producto/`. Usar los términos del glosario.
+- Vulnerabilidades: nunca en issues públicos ni en docs commiteados con detalle explotable; van a un Security Advisory privado.
 
 ## Arquitectura
 

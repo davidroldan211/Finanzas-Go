@@ -1,0 +1,183 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Un push nuevo a la misma rama cancela la ejecución anterior.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Permisos mínimos por defecto; cada job pide más solo si lo necesita.
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Formato (gofmt)
+        run: make fmt-check
+
+      - name: go.mod y go.sum al día
+        run: make tidy-check
+
+      - name: go vet
+        run: make vet
+
+      - name: Fronteras de la arquitectura hexagonal
+        run: make arch
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Pruebas con detector de carreras y cobertura
+        run: make coverage
+
+      - name: Resumen de cobertura
+        if: always()
+        run: |
+          if [ -f coverage.out ]; then
+            echo "### Cobertura" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            go tool cover -func=coverage.out | tail -1 >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Publicar reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage.out
+          if-no-files-found: ignore
+          retention-days: 14
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Compilar
+        run: make build
+
+  vuln:
+    name: Vulnerabilidades
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
+        with:
+          go-version-file: go.mod
+          go-package: ./...
+
+  migrations:
+    name: Migraciones
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:14.3
+        env:
+          POSTGRES_DB: finanzas_ci
+          POSTGRES_USER: finanzas_ci
+          POSTGRES_PASSWORD: finanzas_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U finanzas_ci -d finanzas_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # Valores efímeros solo para la base de datos del job; no son secretos reales.
+      - name: Generar .env para CI
+        run: |
+          cat > .env <<'ENV'
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_USER=finanzas_ci
+          DB_PASSWORD=finanzas_ci
+          DB_NAME=finanzas_ci
+          DB_SSLMODE=disable
+          JWT_SECRET=ci-only-not-a-secret
+          JWT_EXPIRES_IN=24h
+          SERVER_HOST=localhost
+          SERVER_PORT=8080
+          APP_ENV=test
+          ENV
+
+      - name: Aplicar migraciones (up)
+        run: make migrate-up
+
+      - name: Revertir todas (reset)
+        run: make migrate-reset
+
+      - name: Re-aplicar (up)
+        run: make migrate-up
+
+  # Check único para la protección de main: pasa solo si todos los jobs pasan.
+  # Permite agregar o renombrar jobs sin tocar la configuración del repositorio.
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [lint, test, build, vuln, migrations]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verificar resultado de los jobs
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Resultados: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != "success" ]; then
+              echo "::error::Al menos un job no terminó en success"
+              exit 1
+            fi
+          done

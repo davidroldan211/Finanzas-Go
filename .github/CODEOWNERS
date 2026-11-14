@@ -1,0 +1,8 @@
+# Revisor por defecto de todo el repositorio.
+* @davidroldan211
+
+# Cambios sensibles: pipeline, esquema de base de datos y seguridad.
+/.github/ @davidroldan211
+/db/migrations/ @davidroldan211
+/internal/shared/security/ @davidroldan211
+/internal/auth/ @davidroldan211
