@@ -13,7 +13,7 @@ El proyecto esta construido siguiendo los lineamientos de [Arquitectura Hexagona
 
 ## ⚙️ Requisitos
 
-- Go 1.21 o superior
+- Go 1.26 o superior (la versión exacta está en `go.mod`)
 - Docker y Docker Compose
 - `make` 
 

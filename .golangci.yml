@@ -10,7 +10,7 @@ linters:
     - gosec # reglas de seguridad
     - bodyclose
     - errorlint # uso correcto de errors.Is / errors.As
-    - misspell
+    # misspell no se usa: solo conoce inglés y los comentarios están en español.
   exclusions:
     presets:
       - comments
