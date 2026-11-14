@@ -3,7 +3,8 @@ services:
     image: postgres:18.0
     restart: always
     ports:
-      - "${DB_PORT}:5432"  # Puerto externo desde variable de entorno.
+      # Solo localhost: la base no queda expuesta a la red local.
+      - "127.0.0.1:${DB_PORT}:5432"
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
