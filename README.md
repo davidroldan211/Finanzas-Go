@@ -34,7 +34,29 @@ go mod tidy
 ```bash
 docker compose up -d
 ```
-Este comando levantará la infraestructura definida (como PostgreSQL, Redis, etc.).
+Este comando levanta PostgreSQL 18.
+
+### Si ya tenías la base con PostgreSQL 14
+
+Un volumen creado con Postgres 14 no sirve con Postgres 18: el contenedor no arranca. Con `docker compose` todavía en la versión 14 (rama o commit anterior), exporta los datos:
+
+```bash
+docker compose exec -T db pg_dumpall -U "$DB_USER" > respaldo-pg14.sql
+```
+
+Luego, ya con la versión 18, recrea el volumen y restaura. **`down -v` borra el volumen con los datos de Postgres 14**: confirma que `respaldo-pg14.sql` tiene contenido antes de correrlo.
+
+```bash
+docker compose down -v
+```
+```bash
+docker compose up -d
+```
+```bash
+docker compose exec -T db psql -U "$DB_USER" -d postgres < respaldo-pg14.sql
+```
+
+Si los datos locales no importan, basta con `docker compose down -v` y `make migrate-up`.
 
 ## 🗃️ Migraciones de base de datos
 
