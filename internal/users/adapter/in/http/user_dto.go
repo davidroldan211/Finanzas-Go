@@ -13,7 +13,6 @@ type CreateUserRequest struct {
 	FirstName string `json:"first_name" binding:"required"`
 	LastName  string `json:"last_name" binding:"required"`
 	Password  string `json:"password" binding:"required,min=6"`
-	Role      string `json:"role" binding:"omitempty,oneof=admin user"`
 }
 
 func (r CreateUserRequest) toCommand() in.CreateUserCommand {
@@ -22,7 +21,6 @@ func (r CreateUserRequest) toCommand() in.CreateUserCommand {
 		FirstName: r.FirstName,
 		LastName:  r.LastName,
 		Password:  r.Password,
-		Role:      r.Role,
 	}
 }
 

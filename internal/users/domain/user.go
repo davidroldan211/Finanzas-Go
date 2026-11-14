@@ -69,20 +69,29 @@ func (u *User) ApplyUpdate(email, firstName, lastName, role *string, isActive *b
 		newLastName = strings.TrimSpace(*lastName)
 	}
 
-	if fields := validateUserFields(newEmail, newFirstName, newLastName); len(fields) > 0 {
+	fields := validateUserFields(newEmail, newFirstName, newLastName)
+	if role != nil && !IsValidRole(*role) {
+		fields["role"] = "rol inválido"
+	}
+	if len(fields) > 0 {
 		return &ValidationError{Fields: fields}
 	}
 
 	u.Email = newEmail
 	u.FirstName = newFirstName
 	u.LastName = newLastName
-	if role != nil && *role != "" {
+	if role != nil {
 		u.Role = *role
 	}
 	if isActive != nil {
 		u.IsActive = *isActive
 	}
 	return nil
+}
+
+// IsValidRole indica si role es uno de los roles que existen.
+func IsValidRole(role string) bool {
+	return role == RoleAdmin || role == RoleUser
 }
 
 func normalizeEmail(email string) string {

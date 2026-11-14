@@ -169,7 +169,7 @@ func TestGetByID_ZeroID_DoesNotTouchRepository(t *testing.T) {
 	}
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
-	_, err := svc.GetByID(context.Background(), uuid.Nil)
+	_, err := svc.GetByID(context.Background(), adminActor, uuid.Nil)
 	if !errors.Is(err, domain.ErrInvalidUserID) {
 		t.Fatalf("expected ErrInvalidUserID, got %v", err)
 	}
@@ -183,7 +183,7 @@ func TestGetByID_NotFound_Propagates(t *testing.T) {
 	}
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
-	_, err := svc.GetByID(context.Background(), uuid.New())
+	_, err := svc.GetByID(context.Background(), adminActor, uuid.New())
 	if !errors.Is(err, domain.ErrUserNotFound) {
 		t.Fatalf("expected ErrUserNotFound, got %v", err)
 	}
@@ -198,7 +198,7 @@ func TestUpdate_EmailChangedToTakenEmail(t *testing.T) {
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
 	newEmail := "taken@b.com"
-	_, err := svc.Update(context.Background(), in.UpdateUserCommand{ID: existing.ID, Email: &newEmail})
+	_, err := svc.Update(context.Background(), in.Actor{ID: existing.ID, Role: domain.RoleUser}, in.UpdateUserCommand{ID: existing.ID, Email: &newEmail})
 
 	if !errors.Is(err, domain.ErrEmailTaken) {
 		t.Fatalf("expected ErrEmailTaken, got %v", err)
@@ -213,7 +213,7 @@ func TestUpdate_EmailUnchanged_DoesNotCheckExistence(t *testing.T) {
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
 	newFirstName := "Ana María"
-	_, err := svc.Update(context.Background(), in.UpdateUserCommand{ID: existing.ID, FirstName: &newFirstName})
+	_, err := svc.Update(context.Background(), in.Actor{ID: existing.ID, Role: domain.RoleUser}, in.UpdateUserCommand{ID: existing.ID, FirstName: &newFirstName})
 	if err != nil {
 		t.Fatalf("Update returned error: %v", err)
 	}
@@ -269,5 +269,150 @@ func TestList_ClampsLimit(t *testing.T) {
 				t.Fatalf("expected limit %d, got %d", tc.expectLimit, gotLimit)
 			}
 		})
+	}
+}
+
+var adminActor = in.Actor{ID: uuid.New(), Role: domain.RoleAdmin}
+
+func ptr[T any](v T) *T { return &v }
+
+// --- Autorización (GHSA-j36w-x5rp-5f3w) ---
+
+func TestCreate_AlwaysAssignsUserRole(t *testing.T) {
+	repo := &stubUserRepository{}
+	svc := NewUserService(repo, &stubPasswordHasher{})
+
+	user, err := svc.Create(context.Background(), in.CreateUserCommand{
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: "secret-123",
+	})
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+	if user.Role != domain.RoleUser {
+		t.Fatalf("expected role %q, got %q", domain.RoleUser, user.Role)
+	}
+}
+
+func TestGetByID_OtherUser_ReturnsNotFoundWithoutTouchingRepository(t *testing.T) {
+	repo := &stubUserRepository{
+		findByIDFunc: func(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+			t.Fatal("repository should not be called for another user's ID")
+			return nil, nil
+		},
+	}
+	svc := NewUserService(repo, &stubPasswordHasher{})
+	actor := in.Actor{ID: uuid.New(), Role: domain.RoleUser}
+
+	_, err := svc.GetByID(context.Background(), actor, uuid.New())
+	if !errors.Is(err, domain.ErrUserNotFound) {
+		t.Fatalf("expected ErrUserNotFound, got %v", err)
+	}
+}
+
+func TestGetByID_Self_Allowed(t *testing.T) {
+	self := &domain.User{ID: uuid.New(), Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Role: domain.RoleUser}
+	repo := &stubUserRepository{
+		findByIDFunc: func(ctx context.Context, id uuid.UUID) (*domain.User, error) { return self, nil },
+	}
+	svc := NewUserService(repo, &stubPasswordHasher{})
+
+	got, err := svc.GetByID(context.Background(), in.Actor{ID: self.ID, Role: domain.RoleUser}, self.ID)
+	if err != nil || got != self {
+		t.Fatalf("expected own user, got %v, %v", got, err)
+	}
+}
+
+func TestGetByID_Admin_CanReadAnyUser(t *testing.T) {
+	other := &domain.User{ID: uuid.New(), Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Role: domain.RoleUser}
+	repo := &stubUserRepository{
+		findByIDFunc: func(ctx context.Context, id uuid.UUID) (*domain.User, error) { return other, nil },
+	}
+	svc := NewUserService(repo, &stubPasswordHasher{})
+
+	if _, err := svc.GetByID(context.Background(), adminActor, other.ID); err != nil {
+		t.Fatalf("admin should read any user, got %v", err)
+	}
+}
+
+func TestGetByID_ActorWithNilID_CannotReadAnyone(t *testing.T) {
+	svc := NewUserService(&stubUserRepository{}, &stubPasswordHasher{})
+
+	_, err := svc.GetByID(context.Background(), in.Actor{Role: domain.RoleUser}, uuid.New())
+	if !errors.Is(err, domain.ErrUserNotFound) {
+		t.Fatalf("expected ErrUserNotFound, got %v", err)
+	}
+}
+
+func TestUpdate_OtherUser_ReturnsNotFound(t *testing.T) {
+	repo := &stubUserRepository{
+		findByIDFunc: func(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+			t.Fatal("repository should not be called for another user's ID")
+			return nil, nil
+		},
+	}
+	svc := NewUserService(repo, &stubPasswordHasher{})
+	actor := in.Actor{ID: uuid.New(), Role: domain.RoleUser}
+
+	_, err := svc.Update(context.Background(), actor, in.UpdateUserCommand{ID: uuid.New(), FirstName: ptr("X")})
+	if !errors.Is(err, domain.ErrUserNotFound) {
+		t.Fatalf("expected ErrUserNotFound, got %v", err)
+	}
+}
+
+func TestUpdate_UserCannotChangeOwnRoleOrStatus(t *testing.T) {
+	cases := map[string]in.UpdateUserCommand{
+		"role":      {Role: ptr(domain.RoleAdmin)},
+		"is_active": {IsActive: ptr(false)},
+	}
+	for name, cmd := range cases {
+		t.Run(name, func(t *testing.T) {
+			self := uuid.New()
+			repo := &stubUserRepository{
+				findByIDFunc: func(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+					t.Fatal("repository should not be called when the change is forbidden")
+					return nil, nil
+				},
+			}
+			svc := NewUserService(repo, &stubPasswordHasher{})
+			cmd.ID = self
+
+			_, err := svc.Update(context.Background(), in.Actor{ID: self, Role: domain.RoleUser}, cmd)
+			if !errors.Is(err, domain.ErrForbidden) {
+				t.Fatalf("expected ErrForbidden, got %v", err)
+			}
+		})
+	}
+}
+
+func TestUpdate_AdminCanPromoteUser(t *testing.T) {
+	target := &domain.User{ID: uuid.New(), Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Role: domain.RoleUser, IsActive: true}
+	repo := &stubUserRepository{
+		findByIDFunc: func(ctx context.Context, id uuid.UUID) (*domain.User, error) { return target, nil },
+	}
+	svc := NewUserService(repo, &stubPasswordHasher{})
+
+	got, err := svc.Update(context.Background(), adminActor, in.UpdateUserCommand{ID: target.ID, Role: ptr(domain.RoleAdmin)})
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+	if got.Role != domain.RoleAdmin {
+		t.Fatalf("expected role admin, got %q", got.Role)
+	}
+}
+
+func TestUpdate_InvalidRole_IsValidationError(t *testing.T) {
+	target := &domain.User{ID: uuid.New(), Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Role: domain.RoleUser}
+	repo := &stubUserRepository{
+		findByIDFunc: func(ctx context.Context, id uuid.UUID) (*domain.User, error) { return target, nil },
+	}
+	svc := NewUserService(repo, &stubPasswordHasher{})
+
+	_, err := svc.Update(context.Background(), adminActor, in.UpdateUserCommand{ID: target.ID, Role: ptr("superadmin")})
+	var ve *domain.ValidationError
+	if !errors.As(err, &ve) || ve.Fields["role"] == "" {
+		t.Fatalf("expected validation error on role, got %v", err)
+	}
+	if target.Role != domain.RoleUser {
+		t.Fatalf("role must not change on validation error, got %q", target.Role)
 	}
 }
