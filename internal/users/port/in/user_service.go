@@ -12,7 +12,10 @@ import (
 // aplicación ofrece a sus adaptadores de entrada (p.ej. adapter/in/http).
 type UserService interface {
 	// Create es el registro público: siempre crea un usuario con rol user.
-	Create(ctx context.Context, cmd CreateUserCommand) (*domain.User, error)
+	// Devuelve nil tanto si creó el usuario como si el correo ya existía:
+	// el llamador no puede distinguirlos (A5). Solo devuelve error si los
+	// datos son inválidos (*domain.ValidationError) o por una falla interna.
+	Create(ctx context.Context, cmd CreateUserCommand) error
 	// GetByID solo devuelve el usuario si actor es ese usuario o un admin.
 	GetByID(ctx context.Context, actor Actor, id uuid.UUID) (*domain.User, error)
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)

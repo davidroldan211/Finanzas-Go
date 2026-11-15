@@ -22,6 +22,8 @@ type userModel struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
+	// EmailVerifiedAt mapea users.email_verified_at (migración 00004).
+	EmailVerifiedAt *time.Time
 }
 
 func (userModel) TableName() string { return "users" }
@@ -45,6 +47,8 @@ func toDomain(m *userModel) *domain.User {
 		CreatedAt:    m.CreatedAt,
 		UpdatedAt:    m.UpdatedAt,
 		DeletedAt:    deletedAt,
+
+		EmailVerifiedAt: m.EmailVerifiedAt,
 	}
 }
 
@@ -62,6 +66,8 @@ func toModel(u *domain.User) *userModel {
 		IsActive:  u.IsActive,
 		CreatedAt: u.CreatedAt,
 		UpdatedAt: u.UpdatedAt,
+
+		EmailVerifiedAt: u.EmailVerifiedAt,
 	}
 	if u.DeletedAt != nil {
 		m.DeletedAt = gorm.DeletedAt{Time: *u.DeletedAt, Valid: true}

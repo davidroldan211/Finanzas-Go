@@ -9,6 +9,7 @@ import (
 	"finanzas-api/internal/users/port/out"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
 
@@ -27,6 +28,12 @@ func (r *userPostgresRepository) Save(ctx context.Context, user *domain.User) er
 		m.ID = uuid.New()
 	}
 	if err := r.db.WithContext(ctx).Create(m).Error; err != nil {
+		// Dos registros simultáneos con el mismo correo: el segundo choca
+		// con el UNIQUE de users.email. Se traduce al sentinel de dominio
+		// para que application lo trate igual que un correo existente.
+		if isUniqueViolation(err) {
+			return domain.ErrEmailTaken
+		}
 		return fmt.Errorf("users: save: %w", err)
 	}
 	*user = *toDomain(m)
@@ -91,13 +98,27 @@ func (r *userPostgresRepository) List(ctx context.Context, limit, offset int) ([
 	return users, nil
 }
 
+// ExistsByEmail cuenta también los usuarios eliminados (soft delete): la
+// columna email es UNIQUE para todas las filas, así que un correo eliminado
+// tampoco puede volver a usarse (SPEC 01). El reuso llega con CAP-05.
 func (r *userPostgresRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&userModel{}).
-		Where("email = ? AND deleted_at IS NULL", email).
+	err := r.db.WithContext(ctx).Unscoped().Model(&userModel{}).
+		Where("email = ?", email).
 		Count(&count).Error
 	if err != nil {
 		return false, fmt.Errorf("users: exists by email: %w", err)
 	}
 	return count > 0, nil
+}
+
+// pgUniqueViolation es el SQLSTATE de Postgres para una violación de
+// restricción UNIQUE.
+const pgUniqueViolation = "23505"
+
+// isUniqueViolation indica si err (o algún error que envuelve) es una
+// violación de unicidad de Postgres.
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgUniqueViolation
 }

@@ -1,8 +1,11 @@
 package application
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log"
+	"strings"
 	"testing"
 
 	"finanzas-api/internal/users/domain"
@@ -87,11 +90,15 @@ func (h *stubPasswordHasher) Hash(plain string) (string, error) {
 }
 
 func TestCreate_HashesPassword_NeverStoresPlainText(t *testing.T) {
-	repo := &stubUserRepository{}
+	var user *domain.User
+	repo := &stubUserRepository{saveFunc: func(ctx context.Context, u *domain.User) error {
+		user = u
+		return nil
+	}}
 	hasher := &stubPasswordHasher{}
 	svc := NewUserService(repo, hasher)
 
-	user, err := svc.Create(context.Background(), in.CreateUserCommand{
+	err := svc.Create(context.Background(), in.CreateUserCommand{
 		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: "plain-text-password",
 	})
 	if err != nil {
@@ -109,18 +116,18 @@ func TestCreate_HashesPassword_NeverStoresPlainText(t *testing.T) {
 	}
 }
 
-func TestCreate_EmailAlreadyTaken(t *testing.T) {
+func TestCreate_EmailAlreadyTaken_ReturnsNilWithoutSaving(t *testing.T) {
 	repo := &stubUserRepository{
 		existsByEmailFunc: func(ctx context.Context, email string) (bool, error) { return true, nil },
 	}
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
-	_, err := svc.Create(context.Background(), in.CreateUserCommand{
-		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: "secret1",
+	err := svc.Create(context.Background(), in.CreateUserCommand{
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
 	})
 
-	if !errors.Is(err, domain.ErrEmailTaken) {
-		t.Fatalf("expected ErrEmailTaken, got %v", err)
+	if err != nil {
+		t.Fatalf("expected nil for an existing email (A5), got %v", err)
 	}
 	if repo.saveCalled {
 		t.Fatal("expected repo.Save NOT to be called when email is taken")
@@ -131,7 +138,7 @@ func TestCreate_InvalidData_DoesNotCallRepository(t *testing.T) {
 	repo := &stubUserRepository{}
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
-	_, err := svc.Create(context.Background(), in.CreateUserCommand{Email: "", FirstName: "", LastName: ""})
+	err := svc.Create(context.Background(), in.CreateUserCommand{Email: "", FirstName: "", LastName: ""})
 
 	var ve *domain.ValidationError
 	if !errors.As(err, &ve) {
@@ -148,8 +155,8 @@ func TestCreate_HasherError_Propagates(t *testing.T) {
 	hasher := &stubPasswordHasher{hashFunc: func(string) (string, error) { return "", boom }}
 	svc := NewUserService(repo, hasher)
 
-	_, err := svc.Create(context.Background(), in.CreateUserCommand{
-		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: "secret1",
+	err := svc.Create(context.Background(), in.CreateUserCommand{
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
 	})
 
 	if !errors.Is(err, boom) {
@@ -274,16 +281,25 @@ func TestList_ClampsLimit(t *testing.T) {
 
 var adminActor = in.Actor{ID: uuid.New(), Role: domain.RoleAdmin}
 
+// acceptedPlain es una contraseña de prueba que cumple la política de SPEC 01
+// y no contiene el correo ni el nombre de los usuarios de prueba. El nombre
+// evita la palabra "password": gosec (G101) la tomaría por una credencial.
+const acceptedPlain = "rio-cometa-azul"
+
 func ptr[T any](v T) *T { return &v }
 
 // --- Autorización (GHSA-j36w-x5rp-5f3w) ---
 
 func TestCreate_AlwaysAssignsUserRole(t *testing.T) {
-	repo := &stubUserRepository{}
+	var user *domain.User
+	repo := &stubUserRepository{saveFunc: func(ctx context.Context, u *domain.User) error {
+		user = u
+		return nil
+	}}
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
-	user, err := svc.Create(context.Background(), in.CreateUserCommand{
-		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: "secret-123",
+	err := svc.Create(context.Background(), in.CreateUserCommand{
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
 	})
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
@@ -414,5 +430,153 @@ func TestUpdate_InvalidRole_IsValidationError(t *testing.T) {
 	}
 	if target.Role != domain.RoleUser {
 		t.Fatalf("role must not change on validation error, got %q", target.Role)
+	}
+}
+
+// --- SPEC 01: orden del registro ---
+
+func TestCreate_InvalidPassword_IsValidationErrorWithoutHashing(t *testing.T) {
+	repo := &stubUserRepository{}
+	hasherCalled := false
+	hasher := &stubPasswordHasher{hashFunc: func(string) (string, error) {
+		hasherCalled = true
+		return "hashed", nil
+	}}
+	svc := NewUserService(repo, hasher)
+
+	err := svc.Create(context.Background(), in.CreateUserCommand{
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: "corta",
+	})
+
+	var ve *domain.ValidationError
+	if !errors.As(err, &ve) || ve.Fields["password"] == "" {
+		t.Fatalf("expected validation error on password, got %v", err)
+	}
+	if hasherCalled || repo.existsByEmailCalled || repo.saveCalled {
+		t.Fatal("expected neither hasher nor repository to be called on invalid data")
+	}
+}
+
+func TestCreate_MergesUserAndPasswordFieldErrors(t *testing.T) {
+	svc := NewUserService(&stubUserRepository{}, &stubPasswordHasher{})
+
+	err := svc.Create(context.Background(), in.CreateUserCommand{
+		Email: "no-es-correo", FirstName: "", LastName: "Pérez", Password: "corta",
+	})
+
+	var ve *domain.ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected *ValidationError, got %v", err)
+	}
+	for _, field := range []string{"email", "first_name", "password"} {
+		if ve.Fields[field] == "" {
+			t.Errorf("expected field %q in %v", field, ve.Fields)
+		}
+	}
+}
+
+func TestCreate_ExistingEmail_HashesBeforeCheckingExistence(t *testing.T) {
+	var calls []string
+	repo := &stubUserRepository{
+		existsByEmailFunc: func(ctx context.Context, email string) (bool, error) {
+			calls = append(calls, "exists")
+			return true, nil
+		},
+	}
+	hasher := &stubPasswordHasher{hashFunc: func(plain string) (string, error) {
+		calls = append(calls, "hash")
+		return "hashed", nil
+	}}
+	svc := NewUserService(repo, hasher)
+
+	_ = svc.Create(context.Background(), in.CreateUserCommand{
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
+	})
+
+	if len(calls) != 2 || calls[0] != "hash" || calls[1] != "exists" {
+		t.Fatalf("expected exactly [hash exists], got %v", calls)
+	}
+	if repo.saveCalled {
+		t.Fatal("expected repo.Save NOT to be called when email exists")
+	}
+}
+
+func TestCreate_RoleOfSavedUserIsUser(t *testing.T) {
+	var saved *domain.User
+	repo := &stubUserRepository{saveFunc: func(ctx context.Context, u *domain.User) error {
+		saved = u
+		return nil
+	}}
+	svc := NewUserService(repo, &stubPasswordHasher{})
+
+	if err := svc.Create(context.Background(), in.CreateUserCommand{
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
+	}); err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+	if saved == nil || saved.Role != domain.RoleUser {
+		t.Fatalf("expected saved user with role %q, got %+v", domain.RoleUser, saved)
+	}
+	if saved.EmailVerifiedAt != nil {
+		t.Fatalf("expected EmailVerifiedAt nil on registration, got %v", saved.EmailVerifiedAt)
+	}
+}
+
+// --- SPEC 01: registro indistinguible ---
+
+func TestCreate_SaveEmailTaken_ReturnsNil(t *testing.T) {
+	repo := &stubUserRepository{saveFunc: func(ctx context.Context, u *domain.User) error {
+		return domain.ErrEmailTaken
+	}}
+	svc := NewUserService(repo, &stubPasswordHasher{})
+
+	err := svc.Create(context.Background(), in.CreateUserCommand{
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
+	})
+	if err != nil {
+		t.Fatalf("expected nil when Save reports a concurrent duplicate, got %v", err)
+	}
+	if !repo.saveCalled {
+		t.Fatal("expected repo.Save to be called")
+	}
+}
+
+func TestCreate_SaveOtherError_Propagates(t *testing.T) {
+	boom := errors.New("db down")
+	repo := &stubUserRepository{saveFunc: func(ctx context.Context, u *domain.User) error { return boom }}
+	svc := NewUserService(repo, &stubPasswordHasher{})
+
+	err := svc.Create(context.Background(), in.CreateUserCommand{
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
+	})
+	if !errors.Is(err, boom) {
+		t.Fatalf("expected Save error to propagate, got %v", err)
+	}
+}
+
+func TestCreate_NeverLogsTheEmail(t *testing.T) {
+	const email = "registro-privado@ejemplo.co"
+	repos := map[string]*stubUserRepository{
+		"correo existente": {existsByEmailFunc: func(ctx context.Context, e string) (bool, error) { return true, nil }},
+		"carrera en Save":  {saveFunc: func(ctx context.Context, u *domain.User) error { return domain.ErrEmailTaken }},
+		"registro nuevo":   {},
+	}
+	for name, repo := range repos {
+		t.Run(name, func(t *testing.T) {
+			var buf bytes.Buffer
+			prev, prevFlags := log.Writer(), log.Flags()
+			log.SetOutput(&buf)
+			t.Cleanup(func() { log.SetOutput(prev); log.SetFlags(prevFlags) })
+
+			svc := NewUserService(repo, &stubPasswordHasher{})
+			if err := svc.Create(context.Background(), in.CreateUserCommand{
+				Email: email, FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
+			}); err != nil {
+				t.Fatalf("Create returned error: %v", err)
+			}
+			if strings.Contains(buf.String(), email) {
+				t.Fatalf("email leaked to logs: %q", buf.String())
+			}
+		})
 	}
 }

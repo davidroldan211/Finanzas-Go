@@ -90,3 +90,27 @@ func TestToDomain_DeletedAt_MapsToPointer(t *testing.T) {
 		t.Fatalf("expected DeletedAt %v, got %v", deletedAt, *u.DeletedAt)
 	}
 }
+
+func TestEmailVerifiedAt_RoundTrip(t *testing.T) {
+	verifiedAt := time.Date(2026, 3, 3, 10, 0, 0, 0, time.UTC)
+	m := &userModel{ID: uuid.New(), Email: "a@b.com", EmailVerifiedAt: &verifiedAt}
+
+	u := toDomain(m)
+	if u.EmailVerifiedAt == nil || !u.EmailVerifiedAt.Equal(verifiedAt) {
+		t.Fatalf("expected EmailVerifiedAt %v in domain, got %v", verifiedAt, u.EmailVerifiedAt)
+	}
+	back := toModel(u)
+	if back.EmailVerifiedAt == nil || !back.EmailVerifiedAt.Equal(verifiedAt) {
+		t.Fatalf("expected EmailVerifiedAt %v back in model, got %v", verifiedAt, back.EmailVerifiedAt)
+	}
+}
+
+func TestEmailVerifiedAt_NilStaysNil(t *testing.T) {
+	u := toDomain(&userModel{ID: uuid.New(), Email: "a@b.com"})
+	if u.EmailVerifiedAt != nil {
+		t.Fatalf("expected nil EmailVerifiedAt, got %v", u.EmailVerifiedAt)
+	}
+	if toModel(u).EmailVerifiedAt != nil {
+		t.Fatal("expected nil EmailVerifiedAt after toModel")
+	}
+}

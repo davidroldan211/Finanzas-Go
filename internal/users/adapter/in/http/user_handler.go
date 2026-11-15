@@ -20,23 +20,24 @@ func NewUserHandler(userService in.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
 
-// CreateUser maneja la creación de nuevos usuarios.
+// registrationAcceptedMessage es la única respuesta de un registro con
+// datos válidos, se haya creado el usuario o no (A5).
+const registrationAcceptedMessage = "Registro recibido. Revisa tu correo para confirmarlo."
+
+// CreateUser es el registro público. Con datos válidos responde siempre 202
+// con el mismo cuerpo: no devuelve el usuario ni dice si el correo existía.
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req CreateUserRequest
 	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
-	user, err := h.userService.Create(c.Request.Context(), req.toCommand())
-	if err != nil {
+	if err := h.userService.Create(c.Request.Context(), req.toCommand()); err != nil {
 		httpx.Abort(c, toAppError(err))
 		return
 	}
 
-	c.JSON(nethttp.StatusCreated, gin.H{
-		"message": "User created successfully",
-		"user":    toUserResponse(user),
-	})
+	c.JSON(nethttp.StatusAccepted, gin.H{"message": registrationAcceptedMessage})
 }
 
 // GetUser obtiene un usuario por ID.
