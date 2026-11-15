@@ -1,6 +1,6 @@
 # Alcance y backlog — Finanzas-Go
 
-> Fase F0 del [roadmap](../roadmap.html). Estado: **borrador para revisión** · 2026-11-14
+> Fase F0 del [roadmap](../roadmap.html). Estado: **aprobado** · 2026-11-14
 > Términos según el [glosario](glosario.md). Visión en [vision.md](vision.md).
 
 ## 1. Capacidades candidatas
@@ -19,6 +19,8 @@ Lista de todo lo que la app podría hacer, agrupado por épica. El ID se mantien
 | CAP-11 | Cuentas | Cada cuenta en su propia moneda (COP, USD, …) |
 | CAP-12 | Cuentas | Saldo inicial al crear la cuenta |
 | CAP-13 | Cuentas | Préstamos y otras deudas como cuentas |
+| CAP-14 | Cuentas | Tarjeta de crédito: cupo total y cupo disponible |
+| CAP-15 | Cuentas | Tarjeta de crédito: fecha de corte, fecha límite de pago y saldo a pagar del periodo |
 | CAP-20 | Movimientos | Registrar ingreso o gasto |
 | CAP-21 | Movimientos | Transferencia entre cuentas propias, incluso entre monedas distintas |
 | CAP-22 | Movimientos | Pago de tarjeta de crédito como transferencia |
@@ -35,7 +37,8 @@ Lista de todo lo que la app podría hacer, agrupado por épica. El ID se mantien
 | CAP-41 | Consulta | Patrimonio total en moneda principal |
 | CAP-42 | Consulta | Resumen del mes: ingresos, gastos y gasto por categoría |
 | CAP-43 | Consulta | Comparación con meses anteriores y tendencias |
-| CAP-44 | Consulta | Tasas de cambio usadas para consolidar |
+| CAP-44 | Consulta | Ver y ajustar la tasa de cambio usada para consolidar |
+| CAP-45 | Consulta | Tasa de cambio diaria automática desde una fuente pública |
 | CAP-50 | Presupuesto | Límite mensual por categoría |
 | CAP-51 | Presupuesto | Avance del presupuesto durante el mes |
 | CAP-52 | Presupuesto | Aviso al acercarse o pasar el límite |
@@ -52,8 +55,8 @@ Método MoSCoW aplicado **al MVP** (v1.0). "Won't" significa "no en el MVP", no 
 
 | Prioridad | Capacidades |
 |---|---|
-| **Must** — sin esto no hay MVP | CAP-01, 02, 03, 04, 10, 11, 12, 20, 21, 22, 23, 24, 30, 31, 40, 41, 42 |
-| **Should** — muy deseable; entra si no retrasa el MVP | CAP-05, 06, 44 |
+| **Must** — sin esto no hay MVP | CAP-01, 02, 03, 04, 10, 11, 12, 14, 15, 20, 21, 22, 23, 24, 30, 31, 40, 41, 42, 44, 45 |
+| **Should** — muy deseable; entra si no retrasa el MVP | CAP-05, 06 |
 | **Could** — si sobra tiempo | CAP-28, 43 |
 | **Won't (en MVP)** | CAP-13, 25, 26, 27, 32, 50–52, 60, 61, 70, 80–82 |
 
@@ -61,7 +64,7 @@ Método MoSCoW aplicado **al MVP** (v1.0). "Won't" significa "no en el MVP", no 
 
 - Los cuatro problemas de la visión dependen de lo mismo: **movimientos bien registrados en cuentas con saldos correctos**. Sin esa base, presupuestos y metas mostrarían números falsos.
 - El MVP resuelve dos problemas completos: *saber en qué se va el dinero* (CAP-42) y *ver el patrimonio total* (CAP-41).
-- Multi-moneda entra desde el MVP (CAP-11, 21, 41) porque cambiar después cómo se guardan montos y saldos es costoso. **Esto adelanta parte de lo que el roadmap tenía en F9.**
+- Multi-moneda entra desde el MVP (CAP-11, 21, 41, 44, 45) porque cambiar después cómo se guardan montos y saldos es costoso. **Esto adelanta parte de lo que el roadmap tenía en F9.**
 - CAP-05 y CAP-06 son "Should" por producto, pero la normativa de datos puede volverlos obligatorios antes del lanzamiento (ver [SEC-0](../seguridad/sec-0-datos-y-amenazas.md)).
 
 ## 3. Entregas por partes
@@ -84,8 +87,8 @@ El recorrido del usuario va de izquierda a derecha. Debajo de cada actividad, la
 | **v1.0** | HU-01 Registrarme | HU-05 Crear cuenta | HU-08 Registrar gasto | HU-12 Ver saldos | HU-16 Corregir movimiento |
 | | HU-02 Verificar correo | HU-06 Saldo inicial | HU-09 Registrar ingreso | HU-13 Ver patrimonio | HU-17 Anular movimiento |
 | | HU-03 Entrar y salir | HU-07 Cuenta en otra moneda | HU-10 Transferir entre cuentas | HU-14 Resumen del mes | HU-18 Gestionar categorías |
-| | HU-04 Recuperar contraseña | | HU-11 Pagar tarjeta | HU-15 Buscar movimientos | HU-19 Archivar cuenta |
-| | HU-20 Elegir moneda principal | | | | HU-21 Exportar / borrar mis datos |
+| | HU-04 Recuperar contraseña | HU-22 Cupo de la tarjeta | HU-11 Pagar tarjeta | HU-15 Buscar movimientos | HU-19 Archivar cuenta |
+| | HU-20 Elegir moneda principal | HU-23 Corte y pago de la tarjeta | | HU-24 Ajustar tasa de cambio | HU-21 Exportar / borrar mis datos |
 | **después** | | Deudas y préstamos | Recurrentes, importar extracto | Presupuestos, metas, tendencias | Reglas automáticas |
 
 ### Historias del MVP
@@ -104,7 +107,7 @@ Redacción corta. Cada una se convierte en spec completa con criterios de acepta
 | HU-07 | Como usuario quiero crear una cuenta en dólares para registrar el dinero que tengo en esa moneda. | CAP-11 |
 | HU-08 | Como usuario quiero registrar un gasto con monto, categoría, cuenta y fecha en pocos segundos. | CAP-20 |
 | HU-09 | Como usuario quiero registrar un ingreso para que mis saldos reflejen lo que recibo. | CAP-20 |
-| HU-10 | Como usuario quiero mover dinero entre mis cuentas, aunque estén en monedas distintas, sin que cuente como gasto. | CAP-21 |
+| HU-10 | Como usuario quiero mover dinero entre mis cuentas, aunque estén en monedas distintas (indicando cuánto salió y cuánto llegó), sin que cuente como gasto. | CAP-21 |
 | HU-11 | Como usuario quiero registrar el pago de mi tarjeta de crédito para que baje mi deuda sin contar doble el gasto. | CAP-22 |
 | HU-12 | Como usuario quiero ver el saldo actual de cada cuenta. | CAP-40 |
 | HU-13 | Como usuario quiero ver cuánto tengo en total menos lo que debo, en mi moneda principal. | CAP-41 |
@@ -115,14 +118,26 @@ Redacción corta. Cada una se convierte en spec completa con criterios de acepta
 | HU-18 | Como usuario quiero crear y renombrar mis propias categorías además de las predeterminadas. | CAP-30, 31 |
 | HU-19 | Como usuario quiero archivar una cuenta que ya no uso sin perder su historial. | CAP-10 |
 | HU-21 | Como usuario quiero descargar o borrar todos mis datos. | CAP-05, 06 |
+| HU-22 | Como usuario quiero registrar el cupo de mi tarjeta de crédito para saber cuánto cupo me queda disponible. | CAP-14 |
+| HU-23 | Como usuario quiero registrar la fecha de corte y la fecha límite de pago de mi tarjeta para saber cuánto debo pagar y antes de cuándo. | CAP-15 |
+| HU-24 | Como usuario quiero ver y corregir la tasa de cambio con la que se consolida mi patrimonio. | CAP-44, 45 |
 
-## 5. Preguntas abiertas
+## 5. Decisiones de alcance
 
-Decisiones de producto pendientes; ninguna bloquea F1 ni F2, pero sí las specs de F4.
+Respuestas a las preguntas abiertas de F0 (2026-11-14). Son reglas de producto: las specs de F4 parten de aquí.
 
-1. **Tasas de cambio:** ¿el usuario las ingresa a mano, la app las toma de una fuente pública, o ambas?
-2. **Transferencias entre monedas:** ¿se registra el monto que sale y el que llega (la tasa queda implícita) o se pide la tasa?
-3. **Tarjeta de crédito:** ¿se manejan cupo y fecha de corte en el MVP o solo el saldo adeudado?
-4. **Categorías predeterminadas:** ¿cuál es el set inicial? (propuesta: Vivienda, Mercado, Transporte, Salud, Educación, Restaurantes, Entretenimiento, Servicios, Compras, Otros; Salario, Honorarios, Otros ingresos).
-5. **Movimientos a futuro:** ¿se permite registrar un gasto con fecha futura?
-6. **Edición:** ¿hasta cuándo se puede corregir un movimiento antiguo?
+| # | Tema | Decisión | Consecuencia |
+|---|---|---|---|
+| 1 | Tasas de cambio | La app toma una **tasa diaria automática** de una fuente pública y el usuario puede **ajustarla**. | CAP-44 y CAP-45 pasan a Must. La fuente es un proveedor externo: entra al modelo de amenazas (A18). |
+| 2 | Transferencias entre monedas | Se registra el **monto que sale y el monto que llega**; la tasa queda implícita. | HU-10 pide dos montos cuando las monedas de las cuentas difieren. |
+| 3 | Tarjeta de crédito | El MVP maneja **saldo adeudado, cupo, fecha de corte y fecha límite de pago**. | Nuevas CAP-14 y CAP-15, historias HU-22 y HU-23. |
+| 4 | Categorías predeterminadas | Set propuesto con categorías propias de Colombia (lista abajo). | HU-18 parte de este set. |
+| 5 | Movimientos con fecha futura | **No se permiten en el MVP**: la fecha de un movimiento es hoy o anterior. | Los pagos futuros llegan con movimientos recurrentes (v1.3). |
+| 6 | Edición de movimientos | Cualquier movimiento se puede **corregir o anular siempre**, con historial de cada cambio. | Los reportes de meses pasados pueden cambiar; el historial explica por qué. |
+
+### Categorías predeterminadas
+
+| Tipo | Categorías |
+|---|---|
+| Gasto | Vivienda y arriendo, Mercado, Transporte, Servicios públicos, Salud, Educación, Restaurantes, Entretenimiento, Compras, Deudas e intereses, Otros gastos |
+| Ingreso | Salario, Honorarios, Prima, Cesantías, Otros ingresos |

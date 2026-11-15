@@ -1,6 +1,6 @@
 # Visión de producto — Finanzas-Go
 
-> Fase F0 del [roadmap](../roadmap.html). Estado: **borrador para revisión** · 2026-11-14
+> Fase F0 del [roadmap](../roadmap.html). Estado: **aprobado** · 2026-11-14
 
 ## Declaración de visión
 
@@ -86,3 +86,4 @@ Indicadores iniciales, a ajustar después de la beta (F6):
 | 2026-11-14 | Mercado inicial: Colombia. Moneda principal COP, con soporte para cuentas en otras monedas desde el MVP. |
 | 2026-11-14 | Entrada de movimientos en el MVP: manual. |
 | 2026-11-14 | Los cuatro problemas forman parte de la visión; se construyen por partes (ver [alcance](alcance.md)). |
+| 2026-11-14 | Tasas de cambio automáticas con ajuste manual; tarjeta de crédito completa (cupo, corte y pago) desde el MVP; sin movimientos futuros en el MVP; movimientos siempre corregibles con historial. Detalle en [alcance, sección 5](alcance.md#5-decisiones-de-alcance). |

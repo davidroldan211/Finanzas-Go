@@ -1,6 +1,6 @@
 # SEC-0 · Clasificación de datos y modelo de amenazas
 
-> Punto de control de la fase F0 del [roadmap](../roadmap.html). Estado: **borrador para revisión** · 2026-11-14
+> Punto de control de la fase F0 del [roadmap](../roadmap.html). Estado: **aprobado con un pendiente** (normativa) · 2026-11-14
 > Se revisa de nuevo en SEC-6, antes del lanzamiento.
 
 ## 1. Clasificación de datos
@@ -91,6 +91,7 @@ Consecuencia para el alcance: HU-21 (exportar y borrar mis datos) probablemente 
 | A15 | Se pierde la base de datos sin un respaldo restaurable. | Crítico | F6 · SEC-6 |
 | A16 | Abuso de la API o volumen que tumba el servicio. | Medio | F4 · SEC-4 y F6 · SEC-6 |
 | A17 | Un archivo importado malicioso. | Alto | F8 · SEC-8 |
+| A18 | El proveedor de tasas de cambio falla, cambia o entrega datos erróneos, y el patrimonio consolidado queda mal. | Medio | F4 · SEC-4 |
 
 ## 5. Hallazgos en el código actual
 
@@ -108,8 +109,8 @@ El 2026-11-14 se encontraron tres fallas de autorización en el módulo `users`.
 
 ## 6. Criterio de aprobación de SEC-0
 
-- [ ] Clasificación de datos revisada y aceptada.
-- [ ] Lista de datos que nunca se piden aceptada.
-- [ ] Normativa a evaluar asignada a alguien con fecha antes de F6.
-- [ ] Escenarios A1–A17 aceptados y cada uno con la fase que lo atiende.
+- [x] Clasificación de datos revisada y aceptada (2026-11-14).
+- [x] Lista de datos que nunca se piden aceptada (2026-11-14).
+- [ ] Normativa a evaluar asignada a alguien con fecha antes de F6. **Sin asignar por decisión del 2026-11-14; pasa como requisito de entrada a SEC-6.**
+- [x] Escenarios A1–A18 aceptados y cada uno con la fase que lo atiende (2026-11-14; A18 agregado por la decisión de tasas automáticas).
 - [x] Hallazgos H1–H3 registrados (advisory privado) y corregidos en #22.

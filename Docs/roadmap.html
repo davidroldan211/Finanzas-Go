@@ -179,7 +179,7 @@ footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
     <p class="lead">F0 a F2 son fundamentos y pueden avanzar en paralelo. El MVP público queda listo al cerrar F6.</p>
     <nav class="index" aria-label="Índice de fases">
       <a href="#partida"><span class="code">—</span><span class="name">Punto de partida</span><span class="pill done">hecho</span></a>
-      <a href="#f0"><span class="code">F0 · SEC-0</span><span class="name">Visión y alcance</span><span class="pill wip">en revisión</span></a>
+      <a href="#f0"><span class="code">F0 · SEC-0</span><span class="name">Visión y alcance</span><span class="pill done">hecho</span></a>
       <a href="#f1"><span class="code">F1 · SEC-1</span><span class="name">Flujo de trabajo con IA</span><span class="pill wip">en curso</span></a>
       <a href="#f2"><span class="code">F2 · SEC-2</span><span class="name">Flujo de trabajo y DevOps</span><span class="pill wip">en curso</span></a>
       <a href="#f3"><span class="code">F3 · SEC-3</span><span class="name">Identidad completa</span><span class="pill wip">en curso</span></a>
@@ -226,7 +226,7 @@ footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
 <!-- F0 -->
 <section id="f0">
   <div class="wrap">
-    <div class="phase-head"><span class="code">F0</span><h2>Visión y alcance</h2><span class="pill wip">en revisión</span></div>
+    <div class="phase-head"><span class="code">F0</span><h2>Visión y alcance</h2><span class="pill done">hecho</span></div>
     <p class="lead">Tener claro qué se construye y para quién antes de escribir más código. Todo lo que viene después sale del backlog que produce esta fase.</p>
     <div class="phase-grid">
       <ol class="steps">
@@ -238,13 +238,13 @@ footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
         <li><span>Armar el mapa de historias del MVP<span class="tag">Producto</span><span class="sub">Recorrido del usuario de izquierda a derecha; historias debajo, por prioridad.</span></span></li>
       </ol>
       <div class="side">
-        <div class="exit"><h3>SALE CON</h3><p>Visión, glosario y backlog priorizado con el MVP marcado.</p><p style="margin-top:8px;font-size:15px">Borradores: <a href="producto/vision.md">visión</a> · <a href="producto/alcance.md">alcance</a> · <a href="producto/glosario.md">glosario</a> · <a href="seguridad/sec-0-datos-y-amenazas.md">SEC-0</a></p></div>
-        <div class="gate"><h3>SEC-0 · CLASIFICACIÓN Y AMENAZAS</h3>
+        <div class="exit"><h3>SALE CON</h3><p>Visión, glosario y backlog priorizado con el MVP marcado.</p><p style="margin-top:8px;font-size:15px">Aprobados el 2026-11-14: <a href="producto/vision.md">visión</a> · <a href="producto/alcance.md">alcance</a> · <a href="producto/glosario.md">glosario</a> · <a href="seguridad/sec-0-datos-y-amenazas.md">SEC-0</a></p></div>
+        <div class="gate"><h3>SEC-0 · CLASIFICACIÓN Y AMENAZAS · APROBADO CON UN PENDIENTE</h3>
           <ul>
-            <li>Clasificar qué datos manejará la app: personales, financieros, credenciales</li>
-            <li>Identificar la normativa de protección de datos aplicable al país donde operará</li>
-            <li>Primer modelo de amenazas: quién querría estos datos y qué pasa si se filtran</li>
-            <li>Decidir qué datos no se van a pedir nunca</li>
+            <li class="is-done">Clasificar qué datos manejará la app: personales, financieros, credenciales</li>
+            <li>Identificar la normativa de protección de datos aplicable al país donde operará <em>(identificada; revisión sin responsable, pasa a SEC-6)</em></li>
+            <li class="is-done">Primer modelo de amenazas: quién querría estos datos y qué pasa si se filtran</li>
+            <li class="is-done">Decidir qué datos no se van a pedir nunca</li>
           </ul>
         </div>
       </div>
@@ -382,6 +382,8 @@ footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
     <div class="phase-grid">
       <ol class="steps">
         <li><span>Cuentas en varias monedas<span class="tag">Producto</span><span class="sub">Efectivo, banco, billetera digital, tarjeta de crédito; cada una con su moneda y saldo inicial.</span></span></li>
+        <li><span>Tarjeta de crédito completa<span class="tag">Producto</span><span class="sub">Cupo, cupo disponible, fecha de corte, fecha límite de pago y saldo a pagar del periodo.</span></span></li>
+        <li><span>Tasas de cambio<span class="tag">Producto</span><span class="sub">Tasa diaria automática desde una fuente pública, con ajuste manual del usuario.</span></span></li>
         <li><span>Categorías de ingreso y gasto<span class="tag">Producto</span><span class="sub">Un set predeterminado más las que cree cada usuario.</span></span></li>
         <li><span>Registrar ingresos y gastos<span class="tag">Producto</span></span></li>
         <li><span>Transferencias entre cuentas propias<span class="tag">Producto</span><span class="sub">No cuentan como gasto ni como ingreso.</span></span></li>
@@ -397,7 +399,8 @@ footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
             <li>Aislamiento entre usuarios: nadie ve ni modifica datos ajenos, probado en cada endpoint</li>
             <li>Exactitud de montos: sin errores de redondeo y con moneda explícita</li>
             <li>Historial auditable de cambios sobre movimientos</li>
-            <li>Validación de toda entrada: montos, fechas, textos</li>
+            <li>Validación de toda entrada: montos, fechas (sin fechas futuras), textos</li>
+            <li>Proveedor de tasas: sin datos del usuario, con respaldo si falla y con validación de valores (A18)</li>
             <li>Límites de uso para evitar abuso de la API</li>
           </ul>
         </div>
@@ -460,6 +463,7 @@ footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
             <li>Restauración de respaldo probada con éxito</li>
             <li>Procedimiento para notificar a usuarios si hay un incidente</li>
             <li>Repaso del modelo de amenazas de SEC-0</li>
+            <li>Revisión de normativa de datos con responsable asignado (pendiente heredado de SEC-0)</li>
           </ul>
         </div>
       </div>
