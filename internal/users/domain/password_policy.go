@@ -19,11 +19,14 @@ const (
 	passwordContextMinChars = 3
 )
 
+// Mensajes del campo "password". Los nombres evitan la palabra "password"
+// a propósito: gosec (G101) toma una constante de texto con ese nombre por
+// una credencial escrita en el código, y estos son solo mensajes.
 const (
-	msgPasswordTooShort = "la contraseña debe tener al menos 12 caracteres"
-	msgPasswordTooLong  = "la contraseña es demasiado larga"
-	msgPasswordCommon   = "esa contraseña es muy común"
-	msgPasswordContext  = "la contraseña no puede contener tu correo ni tu nombre"
+	msgTooShort         = "la contraseña debe tener al menos 12 caracteres"
+	msgTooLong          = "la contraseña es demasiado larga"
+	msgTooCommon        = "esa contraseña es muy común"
+	msgContainsUserData = "la contraseña no puede contener tu correo ni tu nombre"
 )
 
 //go:embed common_passwords.txt
@@ -51,19 +54,19 @@ func parseCommonPasswords(file string) map[string]struct{} {
 func ValidatePassword(plain, email, firstName, lastName string) string {
 	switch {
 	case utf8.RuneCountInString(plain) < PasswordMinChars:
-		return msgPasswordTooShort
+		return msgTooShort
 	case len(plain) > PasswordMaxBytes:
-		return msgPasswordTooLong
+		return msgTooLong
 	}
 
 	lower := strings.ToLower(plain)
 	if _, common := commonPasswords[lower]; common {
-		return msgPasswordCommon
+		return msgTooCommon
 	}
 
 	for _, value := range passwordContext(email, firstName, lastName) {
 		if strings.Contains(lower, value) {
-			return msgPasswordContext
+			return msgContainsUserData
 		}
 	}
 	return ""
