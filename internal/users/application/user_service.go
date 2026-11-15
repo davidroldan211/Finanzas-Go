@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"finanzas-api/internal/users/domain"
@@ -25,31 +26,70 @@ func NewUserService(repo out.UserRepository, hasher out.PasswordHasher) in.UserS
 // Create es el registro público. El rol siempre es user; un admin solo se
 // crea promoviendo a un usuario existente vía Update.
 //
+// Orden (SPEC 01): validar datos y contraseña, hashear y solo después
+// consultar si el correo existe. Hashear antes iguala el costo de bcrypt
+// entre un correo nuevo y uno ya registrado (A5).
+//
+// Un correo ya registrado (también de un usuario eliminado) devuelve nil sin
+// guardar nada, igual que un registro nuevo. Una carrera entre dos registros
+// con el mismo correo llega como ErrEmailTaken desde Save y también termina
+// en nil. Ninguno de los dos caminos se registra en logs: el correo es
+// Confidencial y su presencia en un log delataría que existe.
+//
 // TODO: exigir correo verificado antes de activar la cuenta cuando se
 // implemente internal/verification.
-func (s *userService) Create(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error) {
-	// Validar y normalizar antes de tocar el repositorio o el hasher.
-	user, err := domain.NewUser(cmd.Email, cmd.FirstName, cmd.LastName, "", domain.RoleUser)
+func (s *userService) Create(ctx context.Context, cmd in.CreateUserCommand) error {
+	user, err := validateRegistration(cmd)
 	if err != nil {
-		return nil, err
-	}
-
-	exists, err := s.repo.ExistsByEmail(ctx, user.Email)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		return nil, domain.ErrEmailTaken
+		return err
 	}
 
 	hash, err := s.hasher.Hash(cmd.Password)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	user.PasswordHash = hash
 
+	exists, err := s.repo.ExistsByEmail(ctx, user.Email)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
+	user.PasswordHash = hash
 	if err := s.repo.Save(ctx, user); err != nil {
-		return nil, err
+		if errors.Is(err, domain.ErrEmailTaken) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+// validateRegistration construye el usuario y aplica la política de
+// contraseñas, reuniendo todos los campos inválidos en un solo
+// ValidationError. No toca el repositorio ni el hasher.
+func validateRegistration(cmd in.CreateUserCommand) (*domain.User, error) {
+	fields := map[string]string{}
+
+	user, err := domain.NewUser(cmd.Email, cmd.FirstName, cmd.LastName, "", domain.RoleUser)
+	if err != nil {
+		var ve *domain.ValidationError
+		if !errors.As(err, &ve) {
+			return nil, err
+		}
+		for k, v := range ve.Fields {
+			fields[k] = v
+		}
+	}
+
+	if msg := domain.ValidatePassword(cmd.Password, cmd.Email, cmd.FirstName, cmd.LastName); msg != "" {
+		fields["password"] = msg
+	}
+
+	if len(fields) > 0 {
+		return nil, &domain.ValidationError{Fields: fields}
 	}
 	return user, nil
 }

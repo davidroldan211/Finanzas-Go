@@ -7,12 +7,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// CreateUserRequest representa la estructura de la petición para crear usuario.
+// CreateUserRequest representa la estructura de la petición para crear
+// usuario. El binding solo exige que los campos vengan: el formato del correo
+// y la política de contraseñas los valida el dominio, que es la única fuente
+// de esas reglas (SPEC 01).
 type CreateUserRequest struct {
-	Email     string `json:"email" binding:"required,email"`
+	Email     string `json:"email" binding:"required"`
 	FirstName string `json:"first_name" binding:"required"`
 	LastName  string `json:"last_name" binding:"required"`
-	Password  string `json:"password" binding:"required,min=6"`
+	Password  string `json:"password" binding:"required"`
 }
 
 func (r CreateUserRequest) toCommand() in.CreateUserCommand {

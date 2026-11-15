@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"net/mail"
 	"strings"
 	"time"
 
@@ -26,6 +27,9 @@ type User struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	DeletedAt    *time.Time // soft delete
+	// EmailVerifiedAt es nil mientras el correo no se haya confirmado.
+	// NewUser siempre lo deja en nil; solo la confirmación (HU-02) lo llena.
+	EmailVerifiedAt *time.Time
 }
 
 // NewUser construye un User validando las invariantes de negocio.
@@ -98,16 +102,31 @@ func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
+// emailMaxLen es el máximo práctico de una dirección (RFC 5321: 254).
+const emailMaxLen = 254
+
+// isValidEmail exige una dirección simple ya normalizada: que net/mail la
+// acepte, que no traiga nombre visible ni <> (lo parseado debe ser igual a
+// la entrada) y que el dominio tenga al menos un punto.
+func isValidEmail(email string) bool {
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
+		return false
+	}
+	at := strings.LastIndex(email, "@")
+	return at > 0 && strings.Contains(email[at+1:], ".")
+}
+
 func validateUserFields(email, firstName, lastName string) map[string]string {
 	fields := map[string]string{}
 
 	switch {
 	case email == "":
 		fields["email"] = "el email es obligatorio"
-	case !strings.Contains(email, "@"):
-		fields["email"] = "formato de email inválido"
-	case len(email) > 255:
+	case len(email) > emailMaxLen:
 		fields["email"] = "el email es demasiado largo"
+	case !isValidEmail(email):
+		fields["email"] = "formato de email inválido"
 	}
 
 	switch {

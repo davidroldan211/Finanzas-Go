@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http/httptest"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"finanzas-api/internal/httpx"
+	"finanzas-api/internal/users/application"
 	"finanzas-api/internal/users/domain"
 	"finanzas-api/internal/users/port/in"
 
@@ -21,7 +23,7 @@ func init() {
 }
 
 type stubUserService struct {
-	createFunc   func(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error)
+	createFunc   func(ctx context.Context, cmd in.CreateUserCommand) error
 	getByIDFunc  func(ctx context.Context, actor in.Actor, id uuid.UUID) (*domain.User, error)
 	updateFunc   func(ctx context.Context, actor in.Actor, cmd in.UpdateUserCommand) (*domain.User, error)
 	deleteFunc   func(ctx context.Context, id uuid.UUID) error
@@ -29,7 +31,7 @@ type stubUserService struct {
 	getByEmailFn func(ctx context.Context, email string) (*domain.User, error)
 }
 
-func (s *stubUserService) Create(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error) {
+func (s *stubUserService) Create(ctx context.Context, cmd in.CreateUserCommand) error {
 	return s.createFunc(ctx, cmd)
 }
 func (s *stubUserService) GetByID(ctx context.Context, actor in.Actor, id uuid.UUID) (*domain.User, error) {
@@ -73,22 +75,26 @@ var fixedUser = &domain.User{
 	UpdatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 }
 
-func TestCreateUser_Success_NoPasswordInResponse(t *testing.T) {
+func TestCreateUser_Success_Returns202WithoutUserData(t *testing.T) {
 	svc := &stubUserService{
-		createFunc: func(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error) {
-			return fixedUser, nil
-		},
+		createFunc: func(ctx context.Context, cmd in.CreateUserCommand) error { return nil },
 	}
 	h := NewUserHandler(svc)
-	c, w := newTestContext("POST", "/users", `{"email":"a@b.com","first_name":"Ana","last_name":"Pérez","password":"secret1"}`)
+	c, w := newTestContext("POST", "/users", `{"email":"a@b.com","first_name":"Ana","last_name":"Pérez","password":"rio-cometa-azul"}`)
 
 	h.CreateUser(c)
 
-	if w.Code != 201 {
-		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	if w.Code != 202 {
+		t.Fatalf("expected 202, got %d: %s", w.Code, w.Body.String())
 	}
-	if strings.Contains(w.Body.String(), "secret1") || strings.Contains(w.Body.String(), "password") {
-		t.Fatalf("response leaked the password: %s", w.Body.String())
+	body := w.Body.String()
+	for _, leak := range []string{"rio-cometa-azul", "password", "hash", `"id"`, `"user"`, "a@b.com"} {
+		if strings.Contains(body, leak) {
+			t.Fatalf("response leaked %q: %s", leak, body)
+		}
+	}
+	if !strings.Contains(body, registrationAcceptedMessage) {
+		t.Fatalf("expected the generic message, got %s", body)
 	}
 }
 
@@ -119,26 +125,36 @@ func TestCreateUser_ValidationError_PopulatesFields(t *testing.T) {
 	}
 }
 
-func TestCreateUser_EmailTaken_Returns409(t *testing.T) {
-	svc := &stubUserService{
-		createFunc: func(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error) {
-			return nil, domain.ErrEmailTaken
-		},
+// TestCreateUser_ExistingEmail_SameResponseAsNewEmail usa el servicio real
+// de application con un repositorio en memoria: la única diferencia entre
+// los dos registros es si el correo ya existe.
+func TestCreateUser_ExistingEmail_SameResponseAsNewEmail(t *testing.T) {
+	register := func(existing bool) (int, string, *memUserRepository) {
+		repo := &memUserRepository{exists: existing}
+		h := NewUserHandler(application.NewUserService(repo, fakeHasher{}))
+		c, w := newTestContext("POST", "/users", `{"email":"a@b.com","first_name":"Ana","last_name":"Pérez","password":"rio-cometa-azul"}`)
+		h.CreateUser(c)
+		return w.Code, w.Body.String(), repo
 	}
-	h := NewUserHandler(svc)
-	c, w := newTestContext("POST", "/users", `{"email":"a@b.com","first_name":"Ana","last_name":"Pérez","password":"secret1"}`)
 
-	h.CreateUser(c)
+	newCode, newBody, newRepo := register(false)
+	takenCode, takenBody, takenRepo := register(true)
 
-	if w.Code != 409 {
-		t.Fatalf("expected 409, got %d: %s", w.Code, w.Body.String())
+	if newCode != 202 || takenCode != 202 {
+		t.Fatalf("expected 202 for both, got new=%d taken=%d", newCode, takenCode)
+	}
+	if newBody != takenBody {
+		t.Fatalf("bodies differ:\nnew:   %s\ntaken: %s", newBody, takenBody)
+	}
+	if newRepo.saved != 1 || takenRepo.saved != 0 {
+		t.Fatalf("expected one save for the new email and none for the taken one, got new=%d taken=%d", newRepo.saved, takenRepo.saved)
 	}
 }
 
 func TestCreateUser_GenericError_Returns500WithoutLeakingMessage(t *testing.T) {
 	svc := &stubUserService{
-		createFunc: func(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error) {
-			return nil, errors.New("conexión perdida con postgres en 10.0.0.9")
+		createFunc: func(ctx context.Context, cmd in.CreateUserCommand) error {
+			return errors.New("conexión perdida con postgres en 10.0.0.9")
 		},
 	}
 	h := NewUserHandler(svc)
@@ -316,9 +332,9 @@ func TestUpdateUser_WithoutActor_Returns401(t *testing.T) {
 func TestCreateUser_RoleInBodyIsIgnored(t *testing.T) {
 	var got in.CreateUserCommand
 	svc := &stubUserService{
-		createFunc: func(ctx context.Context, cmd in.CreateUserCommand) (*domain.User, error) {
+		createFunc: func(ctx context.Context, cmd in.CreateUserCommand) error {
 			got = cmd
-			return fixedUser, nil
+			return nil
 		},
 	}
 	h := NewUserHandler(svc)
@@ -327,10 +343,96 @@ func TestCreateUser_RoleInBodyIsIgnored(t *testing.T) {
 
 	h.CreateUser(c)
 
-	if w.Code != 201 {
-		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	if w.Code != 202 {
+		t.Fatalf("expected 202, got %d: %s", w.Code, w.Body.String())
 	}
 	if got.Email != "x@y.com" {
 		t.Fatalf("command not built from body: %+v", got)
 	}
 }
+
+// --- SPEC 01: el dominio es la única fuente de las reglas ---
+
+func TestCreateUser_DomainRulesReachTheResponse(t *testing.T) {
+	cases := []struct {
+		name, field, body, want string
+	}{
+		{
+			name:  "contraseña de 6 caracteres",
+			field: "password",
+			body:  `{"email":"a@b.com","first_name":"Ana","last_name":"Pérez","password":"secret"}`,
+			want:  domain.ValidatePassword("secret", "a@b.com", "Ana", "Pérez"),
+		},
+		{
+			name:  "contraseña que contiene el nombre",
+			field: "password",
+			body:  `{"email":"a@b.com","first_name":"Ana","last_name":"Pérez","password":"cometa-ana-azul"}`,
+			want:  domain.ValidatePassword("cometa-ana-azul", "a@b.com", "Ana", "Pérez"),
+		},
+		{
+			name:  "correo con nombre visible",
+			field: "email",
+			body:  `{"email":"Ana <a@b.co>","first_name":"Ana","last_name":"Pérez","password":"rio-cometa-azul"}`,
+			want:  "formato de email inválido",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &memUserRepository{}
+			h := NewUserHandler(application.NewUserService(repo, fakeHasher{}))
+			c, w := newTestContext("POST", "/users", tc.body)
+
+			h.CreateUser(c)
+
+			if w.Code != 422 {
+				t.Fatalf("expected 422, got %d: %s", w.Code, w.Body.String())
+			}
+			var resp struct {
+				Error struct {
+					Fields map[string]string `json:"fields"`
+				} `json:"error"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+				t.Fatalf("invalid JSON body: %v", err)
+			}
+			if tc.want == "" || resp.Error.Fields[tc.field] != tc.want {
+				t.Fatalf("expected fields.%s = %q, got %v", tc.field, tc.want, resp.Error.Fields)
+			}
+			if repo.saved != 0 {
+				t.Fatal("expected nothing saved on invalid data")
+			}
+		})
+	}
+}
+
+// --- Dobles para probar el handler con el servicio real (SPEC 01) ---
+
+// memUserRepository implementa out.UserRepository en memoria: solo lo que
+// usa el registro. exists simula un correo ya registrado.
+type memUserRepository struct {
+	exists bool
+	saved  int
+}
+
+func (r *memUserRepository) Save(ctx context.Context, u *domain.User) error {
+	r.saved++
+	return nil
+}
+func (r *memUserRepository) Update(ctx context.Context, u *domain.User) error { return nil }
+func (r *memUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	return nil, domain.ErrUserNotFound
+}
+func (r *memUserRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
+	return nil, domain.ErrUserNotFound
+}
+func (r *memUserRepository) Delete(ctx context.Context, id uuid.UUID) error { return nil }
+func (r *memUserRepository) List(ctx context.Context, limit, offset int) ([]*domain.User, error) {
+	return nil, nil
+}
+func (r *memUserRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
+	return r.exists, nil
+}
+
+type fakeHasher struct{}
+
+func (fakeHasher) Hash(plain string) (string, error) { return "hashed", nil }

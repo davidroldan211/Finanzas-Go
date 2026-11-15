@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -112,5 +113,56 @@ func TestIsValidForAuth(t *testing.T) {
 				t.Errorf("expected %v, got %v", tc.expected, got)
 			}
 		})
+	}
+}
+
+// --- SPEC 01: validación de correo y estado de verificación ---
+
+func TestNewUser_RejectsInvalidEmails(t *testing.T) {
+	cases := map[string]string{
+		"nombre visible":    "Ana <a@b.co>",
+		"dominio sin punto": "a@b",
+		"sin arroba":        "sin-arroba",
+		"255 caracteres":    strings.Repeat("a", 255-len("@ejemplo.co")) + "@ejemplo.co",
+	}
+	for name, email := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := NewUser(email, "Ana", "Pérez", "hashed", RoleUser)
+
+			var ve *ValidationError
+			if !errors.As(err, &ve) {
+				t.Fatalf("expected *ValidationError for %q, got %T: %v", email, err, err)
+			}
+			if _, ok := ve.Fields["email"]; !ok {
+				t.Fatalf("expected fields.email for %q, got %v", email, ve.Fields)
+			}
+		})
+	}
+}
+
+func TestNewUser_Accepts254CharEmail(t *testing.T) {
+	email := strings.Repeat("a", 254-len("@ejemplo.co")) + "@ejemplo.co"
+	if _, err := NewUser(email, "Ana", "Pérez", "hashed", RoleUser); err != nil {
+		t.Fatalf("expected a 254-char email to be accepted, got %v", err)
+	}
+}
+
+func TestNewUser_NormalizesEmail(t *testing.T) {
+	u, err := NewUser("Ana@Ejemplo.co ", "Ana", "Pérez", "hashed", RoleUser)
+	if err != nil {
+		t.Fatalf("NewUser returned error: %v", err)
+	}
+	if u.Email != "ana@ejemplo.co" {
+		t.Fatalf("expected 'ana@ejemplo.co', got %q", u.Email)
+	}
+}
+
+func TestNewUser_EmailNotVerified(t *testing.T) {
+	u, err := NewUser("ana@ejemplo.co", "Ana", "Pérez", "hashed", RoleUser)
+	if err != nil {
+		t.Fatalf("NewUser returned error: %v", err)
+	}
+	if u.EmailVerifiedAt != nil {
+		t.Fatalf("expected EmailVerifiedAt nil, got %v", u.EmailVerifiedAt)
 	}
 }
