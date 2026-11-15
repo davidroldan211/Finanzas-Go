@@ -37,6 +37,7 @@ Las migraciones viven en `db/migrations/*.sql`, numeradas secuencialmente (`0000
 - `main` solo acepta PRs con el check `CI OK` en verde (agrega Lint, Test, Build, Vulnerabilidades, Migraciones).
 - Acciones de GitHub fijadas por SHA con comentario de versión; Dependabot las actualiza.
 - Producto: visión, alcance (CAP-xx, HU-xx) y glosario en `Docs/producto/`. Usar los términos del glosario.
+- Specs en `specs/NN-slug.md`: `/spec` las diseña (Borrador), una persona las aprueba, `/spec-impl` las implementa en `<tipo>/spec-NN-slug` y abre el PR. Skills en `.claude/skills/`; ciclo y Listo/Terminado en `specs/README.md`. Nunca cambiar una spec a `Aprobado` ni hacer merge: lo hace la persona.
 - Vulnerabilidades: nunca en issues públicos ni en docs commiteados con detalle explotable; van a un Security Advisory privado.
 
 ## Arquitectura

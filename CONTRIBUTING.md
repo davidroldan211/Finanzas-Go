@@ -3,7 +3,8 @@
 ## Flujo de trabajo
 
 1. **Todo empieza en un issue** (plantilla *Historia de usuario* o *Error*). Las historias referencian su capacidad del [backlog](Docs/producto/alcance.md).
-2. **Rama desde `main`**, con prefijo según el tipo de cambio:
+2. **Funcionalidades: spec primero.** Con Claude Code, `/spec <descripción>` crea `specs/NN-slug.md` en Borrador; una persona la aprueba y `/spec-impl NN-slug` la implementa y abre el PR. Ciclo, "Listo" y "Terminado" en [specs/README.md](specs/README.md). Correcciones pequeñas y cambios de documentación pueden ir sin spec.
+3. **Rama desde `main`**, con prefijo según el tipo de cambio:
 
    | Prefijo | Uso |
    |---|---|
@@ -13,16 +14,17 @@
    | `refactor/` | Cambio interno sin cambiar comportamiento |
    | `test/` | Solo pruebas |
    | `chore/`, `ci/` | Mantenimiento, dependencias, pipeline |
+   | `security/` | Corrección o control de seguridad |
 
-   Ejemplo: `feat/hu-08-registrar-gasto`.
-3. **Antes de abrir el PR:** `make ci` debe pasar en local.
-4. **PR hacia `main`** completando la plantilla. El título sigue [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/) porque se convierte en el commit de `main` (squash merge):
+   Con spec: `<tipo>/spec-NN-slug` (p. ej. `feat/spec-03-registrar-gasto`). Sin spec: `feat/hu-08-registrar-gasto`.
+4. **Antes de abrir el PR:** `make ci` debe pasar en local.
+5. **PR hacia `main`** completando la plantilla. El título sigue [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/) porque se convierte en el commit de `main` (squash merge):
 
    ```
    feat(users): permitir registro público con verificación de correo
    fix(auth): rechazar tokens con algoritmo distinto a HS256
    ```
-5. **Merge** solo con el check `CI OK` en verde y las conversaciones resueltas. La rama se borra automáticamente.
+6. **Merge** solo con el check `CI OK` en verde y las conversaciones resueltas. La rama se borra automáticamente.
 
 ## Reglas que no se negocian
 
