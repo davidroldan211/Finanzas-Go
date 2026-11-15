@@ -1,0 +1,11 @@
+# Configuración del flujo de specs
+#
+# AutoCreateBranch — si /spec-impl crea la rama automáticamente.
+#   true  (por defecto) → crea <tipo>/spec-NN-slug desde main sin preguntar
+#   false               → pide confirmación [s/N] antes de crearla
+AutoCreateBranch: true
+
+# AutoCommitSteps — si /spec-impl commitea cada paso terminado.
+#   false (por defecto) → un solo commit al final, con mensaje Conventional Commits
+#   true                → un commit por paso: spec-NN-step-MM
+AutoCommitSteps: false

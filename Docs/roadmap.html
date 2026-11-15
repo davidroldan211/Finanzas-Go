@@ -180,7 +180,7 @@ footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
     <nav class="index" aria-label="Índice de fases">
       <a href="#partida"><span class="code">—</span><span class="name">Punto de partida</span><span class="pill done">hecho</span></a>
       <a href="#f0"><span class="code">F0 · SEC-0</span><span class="name">Visión y alcance</span><span class="pill wip">en revisión</span></a>
-      <a href="#f1"><span class="code">F1 · SEC-1</span><span class="name">Flujo de trabajo con IA</span><span class="pill todo">pendiente</span></a>
+      <a href="#f1"><span class="code">F1 · SEC-1</span><span class="name">Flujo de trabajo con IA</span><span class="pill wip">en curso</span></a>
       <a href="#f2"><span class="code">F2 · SEC-2</span><span class="name">Flujo de trabajo y DevOps</span><span class="pill wip">en curso</span></a>
       <a href="#f3"><span class="code">F3 · SEC-3</span><span class="name">Identidad completa</span><span class="pill wip">en curso</span></a>
       <a href="#f4"><span class="code">F4 · SEC-4</span><span class="name">Núcleo financiero</span><span class="pill todo">pendiente</span></a>
@@ -255,7 +255,7 @@ footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
 <!-- F1 -->
 <section id="f1">
   <div class="wrap">
-    <div class="phase-head"><span class="code">F1</span><h2>Flujo de trabajo con IA</h2><span class="pill todo">pendiente</span></div>
+    <div class="phase-head"><span class="code">F1</span><h2>Flujo de trabajo con IA</h2><span class="pill wip">en curso</span></div>
     <p class="lead">Cada funcionalidad nace como una spec revisable antes de que exista código. La IA ayuda a redactar, planear e implementar; las decisiones y la aprobación son humanas.</p>
 
     <div class="cycle" role="list" aria-label="Ciclo de una historia">
@@ -272,10 +272,10 @@ footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
 
     <div class="phase-grid" style="margin-top:22px">
       <ol class="steps">
-        <li><span>Definir una plantilla única de spec<span class="tag">IA</span><span class="sub">Contexto, historia, criterios de aceptación, fuera de alcance, preguntas abiertas, impacto en seguridad.</span></span></li>
-        <li><span>Definir “Listo” y “Terminado”<span class="tag">IA</span><span class="sub">Cuándo una spec puede implementarse y cuándo una historia se da por cerrada.</span></span></li>
-        <li><span>Alinear tus skills existentes con la plantilla<span class="tag">IA</span><span class="sub">Qué skill se usa en cada etapa del ciclo y qué produce cada una.</span></span></li>
-        <li><span>Decidir dónde viven las specs<span class="tag">IA</span><span class="sub">Y cómo se enlazan con ramas, PRs y commits para tener trazabilidad.</span></span></li>
+        <li class="is-done"><span>Definir una plantilla única de spec<span class="tag">IA</span><span class="sub">Contexto, historia, criterios de aceptación, fuera de alcance, preguntas abiertas, impacto en seguridad.</span></span></li>
+        <li class="is-done"><span>Definir “Listo” y “Terminado”<span class="tag">IA</span><span class="sub">Cuándo una spec puede implementarse y cuándo una historia se da por cerrada.</span></span></li>
+        <li class="is-done"><span>Alinear tus skills existentes con la plantilla<span class="tag">IA</span><span class="sub">Qué skill se usa en cada etapa del ciclo y qué produce cada una.</span></span></li>
+        <li class="is-done"><span>Decidir dónde viven las specs<span class="tag">IA</span><span class="sub">Y cómo se enlazan con ramas, PRs y commits para tener trazabilidad.</span></span></li>
         <li><span>Adoptar registros de decisión<span class="tag">IA</span><span class="sub">Una nota corta cada vez que una spec cambia algo estructural.</span></span></li>
         <li><span>Mantener vivo el contexto que lee la IA<span class="tag">IA</span><span class="sub">Actualizar CLAUDE.md y la documentación al cerrar cada historia.</span></span></li>
         <li><span>Piloto: correr el ciclo completo con una historia pequeña<span class="tag">IA</span><span class="sub">Candidata: terminar la verificación de email (F3, paso 01). Ajustar la plantilla con lo aprendido.</span></span></li>
