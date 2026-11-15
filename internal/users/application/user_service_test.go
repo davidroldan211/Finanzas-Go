@@ -123,7 +123,7 @@ func TestCreate_EmailAlreadyTaken_ReturnsNilWithoutSaving(t *testing.T) {
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
 	err := svc.Create(context.Background(), in.CreateUserCommand{
-		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: validPassword,
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
 	})
 
 	if err != nil {
@@ -156,7 +156,7 @@ func TestCreate_HasherError_Propagates(t *testing.T) {
 	svc := NewUserService(repo, hasher)
 
 	err := svc.Create(context.Background(), in.CreateUserCommand{
-		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: validPassword,
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
 	})
 
 	if !errors.Is(err, boom) {
@@ -281,9 +281,10 @@ func TestList_ClampsLimit(t *testing.T) {
 
 var adminActor = in.Actor{ID: uuid.New(), Role: domain.RoleAdmin}
 
-// validPassword cumple la política de contraseñas de SPEC 01 y no contiene
-// el correo ni el nombre de los usuarios de prueba.
-const validPassword = "rio-cometa-azul"
+// acceptedPlain es una contraseña de prueba que cumple la política de SPEC 01
+// y no contiene el correo ni el nombre de los usuarios de prueba. El nombre
+// evita la palabra "password": gosec (G101) la tomaría por una credencial.
+const acceptedPlain = "rio-cometa-azul"
 
 func ptr[T any](v T) *T { return &v }
 
@@ -298,7 +299,7 @@ func TestCreate_AlwaysAssignsUserRole(t *testing.T) {
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
 	err := svc.Create(context.Background(), in.CreateUserCommand{
-		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: validPassword,
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
 	})
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
@@ -489,7 +490,7 @@ func TestCreate_ExistingEmail_HashesBeforeCheckingExistence(t *testing.T) {
 	svc := NewUserService(repo, hasher)
 
 	_ = svc.Create(context.Background(), in.CreateUserCommand{
-		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: validPassword,
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
 	})
 
 	if len(calls) != 2 || calls[0] != "hash" || calls[1] != "exists" {
@@ -509,7 +510,7 @@ func TestCreate_RoleOfSavedUserIsUser(t *testing.T) {
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
 	if err := svc.Create(context.Background(), in.CreateUserCommand{
-		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: validPassword,
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
 	}); err != nil {
 		t.Fatalf("Create returned error: %v", err)
 	}
@@ -530,7 +531,7 @@ func TestCreate_SaveEmailTaken_ReturnsNil(t *testing.T) {
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
 	err := svc.Create(context.Background(), in.CreateUserCommand{
-		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: validPassword,
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
 	})
 	if err != nil {
 		t.Fatalf("expected nil when Save reports a concurrent duplicate, got %v", err)
@@ -546,7 +547,7 @@ func TestCreate_SaveOtherError_Propagates(t *testing.T) {
 	svc := NewUserService(repo, &stubPasswordHasher{})
 
 	err := svc.Create(context.Background(), in.CreateUserCommand{
-		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: validPassword,
+		Email: "a@b.com", FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
 	})
 	if !errors.Is(err, boom) {
 		t.Fatalf("expected Save error to propagate, got %v", err)
@@ -569,7 +570,7 @@ func TestCreate_NeverLogsTheEmail(t *testing.T) {
 
 			svc := NewUserService(repo, &stubPasswordHasher{})
 			if err := svc.Create(context.Background(), in.CreateUserCommand{
-				Email: email, FirstName: "Ana", LastName: "Pérez", Password: validPassword,
+				Email: email, FirstName: "Ana", LastName: "Pérez", Password: acceptedPlain,
 			}); err != nil {
 				t.Fatalf("Create returned error: %v", err)
 			}
