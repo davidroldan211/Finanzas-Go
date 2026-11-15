@@ -43,3 +43,5 @@ vendor/
 
 # Cache de Go
 **/.cache/
+# Configuración personal de Claude Code (las skills en .claude/skills sí se versionan)
+.claude/settings.local.json

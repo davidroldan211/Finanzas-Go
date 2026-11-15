@@ -87,7 +87,7 @@ type Movement struct {
 
 **Migración** — `db/migrations/00004_create_movements.sql` (nueva; nunca editar una ya mergeada).
 
-Convenciones:
+Convenciones (ejemplo ilustrativo; las reales las decide cada spec):
 
 - Montos como enteros en la unidad mínima de la moneda; nunca `float`.
 - Toda tabla de datos del usuario lleva `user_id` con índice.
