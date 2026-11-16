@@ -6,7 +6,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/pgx/v5 v5.12.0
+	github.com/jackc/pgx/v5 v5.13.0
 	github.com/jackc/puddle/v2 v2.2.3 // indirect
 	golang.org/x/sync v0.25.0 // indirect
 )
@@ -45,12 +45,12 @@ require (
 	gorm.io/gorm v1.31.2
 )
 
-require github.com/pressly/goose/v3 v3.30.0
+require github.com/pressly/goose/v3 v3.30.1
 
 require (
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
-	github.com/mfridman/interpolate v0.0.2 // indirect
+	github.com/mfridman/interpolate v0.2.0 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.1 // indirect
 	github.com/sethvargo/go-retry v0.5.0 // indirect
